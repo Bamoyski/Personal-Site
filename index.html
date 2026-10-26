@@ -1,149 +1,1881 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>benmoyer.org</title>
-  <link rel="icon" href="data:," />
+  <script>
+    document.documentElement.classList.add('js');
+    try {
+      var savedTheme = localStorage.getItem('bm-theme');
+      if (savedTheme === 'light' || savedTheme === 'dark') {
+        document.documentElement.dataset.theme = savedTheme;
+      }
+    } catch (error) { /* storage unavailable */ }
+  </script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ben Moyer — Infrastructure &amp; Interface</title>
+  <meta name="description" content="Ben Moyer builds self-hosted infrastructure and the interfaces on top of it. Author of ProxVM and founder of Bamoyski Studios.">
+  <meta name="author" content="Ben Moyer">
+  <meta name="theme-color" content="#070a0c">
+  <link rel="canonical" href="https://benmoyer.org/">
+
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benmoyer.org/">
+  <meta property="og:site_name" content="Ben Moyer">
+  <meta property="og:title" content="Ben Moyer — Infrastructure &amp; Interface">
+  <meta property="og:description" content="I build the boring parts beautifully. Proxmox homelab operator, author of ProxVM, and founder of Bamoyski Studios.">
+  <meta property="og:image" content="https://benmoyer.org/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Ben Moyer — I build the boring parts beautifully.">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Ben Moyer — Infrastructure &amp; Interface">
+  <meta name="twitter:description" content="I build the boring parts beautifully. Proxmox homelab operator, author of ProxVM, and founder of Bamoyski Studios.">
+  <meta name="twitter:image" content="https://benmoyer.org/og.png">
+  <meta name="twitter:image:alt" content="Ben Moyer — I build the boring parts beautifully.">
+  <meta name="color-scheme" content="dark light">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    "name": "Ben Moyer",
+    "url": "https://benmoyer.org/",
+    "image": "https://benmoyer.org/og.png",
+    "jobTitle": "Builder and homelab operator",
+    "worksFor": {
+      "@type": "Organization",
+      "name": "Bamoyski Studios"
+    },
+    "sameAs": [
+      "https://github.com/Bamoyski"
+    ],
+    "knowsAbout": [
+      "Proxmox VE",
+      "Apache Guacamole",
+      "TypeScript",
+      "React",
+      "PostgreSQL",
+      "Self-hosted infrastructure"
+    ]
+  }
+  </script>
+
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="avatar.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
   <style>
+    /* ---------------------------------- tokens ---------------------------------- */
     :root {
-      --bg: #020617;
-      --card: rgba(15,23,42,0.85);
-      --border: rgba(255,255,255,0.08);
-      --text: #e5e7eb;
-      --muted: #94a3b8;
+      --bg: #070a0c;
+      --bg-soft: #0a0e11;
+      --panel: #0d1216;
+      --panel-2: #11171c;
+      --line: #1d262c;
+      --line-2: #2a363e;
+      --text: #eef3f4;
+      --muted: #93a2aa;
+      --faint: #74868f;
+      --accent: #7dd3dc;
+      --accent-strong: #a9e9ef;
+      --accent-ink: #062126;
+      --warm: #e8c79b;
+      --radius: 18px;
+      --shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.7);
+      --max: 1180px;
+      --font-sans: "Instrument Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      --font-serif: "Instrument Serif", Georgia, "Times New Roman", serif;
+      --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    html[data-theme="light"] {
+      --bg: #f4f1e9;
+      --bg-soft: #efebe1;
+      --panel: #fffdf8;
+      --panel-2: #f8f4ea;
+      --line: #ddd6c8;
+      --line-2: #c8bfae;
+      --text: #101619;
+      --muted: #52636b;
+      --faint: #566a72;
+      --accent: #0c7c88;
+      --accent-strong: #0a626c;
+      --accent-ink: #f7ffff;
+      --warm: #94652a;
+      --shadow: 0 30px 80px -30px rgba(40, 35, 25, 0.35);
     }
 
     * { box-sizing: border-box; }
+    html {
+      scroll-behavior: smooth;
+      scroll-padding-top: 96px;
+      color-scheme: dark;
+    }
+    html[data-theme="light"] { color-scheme: light; }
 
     body {
       margin: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: radial-gradient(circle at 20% 20%, #111827, var(--bg));
-      color: var(--text);
       min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      font-size: 16px;
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
     }
 
-    header {
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -2;
+      pointer-events: none;
+      background:
+        radial-gradient(760px 540px at 8% -10%, rgba(125, 211, 220, 0.10), transparent 62%),
+        radial-gradient(900px 620px at 92% -4%, rgba(232, 199, 155, 0.055), transparent 60%);
+    }
+    html[data-theme="light"] body::before {
+      background:
+        radial-gradient(760px 540px at 8% -10%, rgba(12, 124, 136, 0.09), transparent 62%),
+        radial-gradient(900px 620px at 92% -4%, rgba(148, 101, 42, 0.07), transparent 60%);
+    }
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      background-image:
+        linear-gradient(to right, rgba(147, 162, 170, 0.055) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(147, 162, 170, 0.055) 1px, transparent 1px);
+      background-size: 68px 68px;
+      -webkit-mask-image: radial-gradient(ellipse 90% 60% at 50% 0%, #000 20%, transparent 78%);
+      mask-image: radial-gradient(ellipse 90% 60% at 50% 0%, #000 20%, transparent 78%);
+    }
+
+    ::selection { background: var(--accent); color: var(--accent-ink); }
+    a { color: var(--accent); }
+    img, svg { display: block; max-width: 100%; }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+
+    :focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+      border-radius: 3px;
+    }
+
+    .wrap {
+      width: 100%;
+      max-width: var(--max);
+      margin-inline: auto;
+      padding-inline: 32px;
+    }
+
+    .mono {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      letter-spacing: 0.01em;
+    }
+
+    .skip {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      z-index: 100;
+      transform: translateY(-160%);
+      background: var(--accent);
+      color: var(--accent-ink);
+      padding: 10px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: transform 0.2s ease;
+    }
+    .skip:focus { transform: translateY(0); }
+
+    /* ---------------------------------- nav ---------------------------------- */
+    .site-head {
       position: sticky;
       top: 0;
-      backdrop-filter: blur(10px);
-      background: rgba(2,6,23,0.75);
-      border-bottom: 1px solid var(--border);
+      z-index: 50;
+      border-bottom: 1px solid var(--line);
+      background: color-mix(in srgb, var(--bg) 78%, transparent);
+      backdrop-filter: blur(18px) saturate(140%);
+      -webkit-backdrop-filter: blur(18px) saturate(140%);
     }
 
-    nav {
-      max-width: 1000px;
-      margin: auto;
-      padding: 14px 22px;
+    .nav {
       display: flex;
-      justify-content: space-between;
       align-items: center;
+      gap: 26px;
+      min-height: 72px;
     }
 
     .brand {
-      font-weight: 600;
-      letter-spacing: 0.3px;
-    }
-
-    .nav-links a {
-      text-decoration: none;
-      color: var(--muted);
-      margin-left: 18px;
-      font-size: 0.95rem;
-      transition: 0.2s;
-    }
-
-    .nav-links a:hover {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
       color: var(--text);
+      text-decoration: none;
+      flex: none;
+    }
+    .mark {
+      display: grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: var(--accent);
+      color: var(--accent-ink);
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-size: 1.55rem;
+      line-height: 1;
+      padding-right: 3px;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+      transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .brand:hover .mark { transform: rotate(-8deg) scale(1.04); }
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+      font-weight: 600;
+      font-size: 0.98rem;
+      letter-spacing: -0.015em;
+      line-height: 1.15;
+    }
+    .brand-sub {
+      font-family: var(--font-mono);
+      font-size: 0.6rem;
+      font-weight: 400;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+      color: var(--faint);
+      margin-top: 2px;
     }
 
-    main {
-      max-width: 1000px;
-      margin: auto;
-      padding: 70px 22px 90px;
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-left: 18px;
+    }
+    .nav-links a {
+      position: relative;
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.86rem;
+      font-weight: 500;
+      padding: 8px 13px;
+      border-radius: 6px;
+      transition: color 0.2s ease, background-color 0.2s ease;
+    }
+    .nav-links a:hover { color: var(--text); background: var(--panel); }
+    .nav-links a[aria-current="true"] { color: var(--text); }
+    .nav-links a[aria-current="true"]::after {
+      content: "";
+      position: absolute;
+      left: 13px;
+      right: 13px;
+      bottom: 3px;
+      height: 1px;
+      background: var(--accent);
     }
 
-    section {
-      margin-bottom: 60px;
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-left: auto;
     }
 
-    h2 {
-      margin: 0 0 16px;
-      font-size: 1.4rem;
+    .icon-btn {
+      display: grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      padding: 0;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: transparent;
+      color: var(--muted);
+      transition: color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+    }
+    .icon-btn:hover { color: var(--accent); border-color: var(--line-2); background: var(--panel); }
+    .icon-btn svg { width: 16px; height: 16px; }
+    html[data-theme="dark"] .icon-moon { display: none; }
+    html[data-theme="light"] .icon-sun { display: none; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      min-height: 44px;
+      padding: 10px 20px;
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      background: var(--accent);
+      color: var(--accent-ink);
+      font-size: 0.9rem;
+      font-weight: 650;
+      letter-spacing: -0.005em;
+      line-height: 1;
+      text-decoration: none;
+      white-space: nowrap;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
+      transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+    }
+    .btn:hover { background: var(--accent-strong); border-color: var(--accent-strong); transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+    .btn svg { width: 15px; height: 15px; flex: none; }
+    .btn .arrow { transition: transform 0.2s ease; }
+    .btn:hover .arrow { transform: translate(2px, -2px); }
+
+    .btn-ghost {
+      background: transparent;
+      border-color: var(--line-2);
+      color: var(--text);
+      box-shadow: none;
+    }
+    .btn-ghost:hover { background: var(--panel); border-color: var(--accent); color: var(--accent); }
+    .btn-sm { min-height: 38px; padding: 8px 15px; font-size: 0.82rem; }
+
+    .text-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--muted);
+      font-size: 0.86rem;
+      font-weight: 550;
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+    .text-link:hover { color: var(--accent); }
+    .text-link svg { width: 14px; height: 14px; }
+
+    /* ---------------------------------- hero ---------------------------------- */
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.06fr) minmax(0, 0.94fr);
+      gap: clamp(40px, 6vw, 84px);
+      align-items: center;
+      min-height: calc(100svh - 72px);
+      padding-top: 64px;
+      padding-bottom: 76px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 26px;
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      letter-spacing: 0.17em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .eyebrow .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 14%, transparent);
+      animation: breathe 3.6s ease-in-out infinite;
+    }
+
+    .hero h1 {
+      margin: 0 0 28px;
+      font-size: clamp(3.1rem, 7.5vw, 6.35rem);
+      line-height: 0.94;
+      letter-spacing: -0.055em;
+      font-weight: 600;
+      text-wrap: balance;
+    }
+    .hero h1 em {
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-weight: 400;
+      letter-spacing: -0.025em;
+      color: var(--accent);
+      padding-right: 0.04em;
+    }
+
+    .lede {
+      max-width: 34rem;
+      margin: 0 0 30px;
+      color: var(--muted);
+      font-size: clamp(1rem, 1.35vw, 1.12rem);
+      line-height: 1.65;
+      text-wrap: pretty;
+    }
+    .lede a { color: var(--text); text-decoration-color: color-mix(in srgb, var(--accent) 50%, transparent); text-underline-offset: 3px; }
+    .lede a:hover { color: var(--accent); }
+
+    .hero-cta { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 34px; }
+
+    .hero-meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 9px 22px;
+      color: var(--faint);
+      font-size: 0.68rem;
+      letter-spacing: 0.03em;
+    }
+    .hero-meta span { display: inline-flex; align-items: center; gap: 8px; }
+    .hero-meta span + span::before {
+      content: "";
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: var(--line-2);
+      margin-right: 12px;
+    }
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #6ee7a8;
+      box-shadow: 0 0 8px rgba(110, 231, 168, 0.8);
+    }
+
+    /* ------------------------------- system card ------------------------------- */
+    .hero-visual { display: flex; justify-content: flex-end; }
+
+    .sys-card {
+      --ink-bg: #090e11;
+      --ink-panel: #0d1418;
+      --ink-line: #223038;
+      --ink-text: #e7f0f2;
+      --ink-muted: #7f919a;
+      position: relative;
+      width: 100%;
+      max-width: 490px;
+      border: 1px solid var(--ink-line);
+      border-radius: 16px;
+      background: var(--ink-bg);
+      color: var(--ink-text);
+      box-shadow: var(--shadow), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      overflow: hidden;
+    }
+    .sys-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: radial-gradient(420px 240px at 50% 32%, rgba(125, 211, 220, 0.11), transparent 70%);
+    }
+    .sys-top,
+    .sys-foot {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 12px 16px;
+      font-family: var(--font-mono);
+      font-size: 0.63rem;
+      letter-spacing: 0.06em;
+      color: var(--ink-muted);
+      text-transform: uppercase;
+      background: rgba(255, 255, 255, 0.018);
+    }
+    .sys-top { border-bottom: 1px solid var(--ink-line); }
+    .sys-foot { border-top: 1px solid var(--ink-line); }
+    .sys-foot span { display: inline-flex; align-items: center; gap: 6px; }
+    .sys-foot span::before {
+      content: "";
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: var(--accent);
+      opacity: 0.75;
+    }
+    .live { display: inline-flex; align-items: center; gap: 7px; color: #7ee2ad; }
+    .live i {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #6ee7a8;
+      box-shadow: 0 0 8px rgba(110, 231, 168, 0.9);
+      animation: breathe 2.8s ease-in-out infinite;
+    }
+
+    .sys-map {
+      position: relative;
+      z-index: 1;
+      padding: 26px 24px 22px;
+      background-image:
+        linear-gradient(rgba(125, 211, 220, 0.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(125, 211, 220, 0.045) 1px, transparent 1px);
+      background-size: 34px 34px;
+    }
+    .node-row { display: flex; justify-content: center; }
+    .node-row.split { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .node {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1px;
+      min-width: 148px;
+      padding: 9px 16px;
+      border: 1px solid var(--ink-line);
+      border-radius: 7px;
+      background: var(--ink-panel);
+      color: var(--ink-text);
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      line-height: 1.45;
+      text-align: center;
+      box-shadow: 0 1px 0 rgba(255, 255, 255, 0.025) inset;
+    }
+    .node small {
+      font-size: 0.55rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--ink-muted);
+    }
+    .node-core {
+      min-width: 178px;
+      border-color: rgba(125, 211, 220, 0.52);
+      background: linear-gradient(180deg, rgba(125, 211, 220, 0.14), rgba(125, 211, 220, 0.04));
+      color: var(--accent);
+      box-shadow: 0 0 40px -14px rgba(125, 211, 220, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    }
+    .node-core small { color: rgba(169, 233, 239, 0.7); }
+    .node-edge { border-color: #2c3d46; }
+    .node-row.split .node { width: 100%; min-width: 0; font-size: 0.67rem; padding-inline: 8px; }
+
+    .wire {
+      position: relative;
+      width: 1px;
+      height: 24px;
+      margin: 0 auto;
+      background: var(--ink-line);
+    }
+    .wire::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: -1.5px;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 9px var(--accent);
+      animation: packet 2.6s linear infinite;
+    }
+    .wire:nth-of-type(2)::after { animation-delay: 1.3s; }
+
+    .fork {
+      display: block;
+      width: 100%;
+      height: 46px;
+      overflow: visible;
+    }
+    .fork path {
+      fill: none;
+      stroke: rgba(125, 211, 220, 0.4);
+      stroke-width: 1;
+      stroke-dasharray: 3 5;
+      animation: dash 2s linear infinite;
+    }
+    /* --------------------------------- ticker --------------------------------- */
+    .ticker {
+      position: relative;
+      display: flex;
+      overflow: hidden;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      background: var(--bg-soft);
+      -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+      mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+    }
+    .ticker-track {
+      display: flex;
+      align-items: center;
+      gap: 34px;
+      flex: none;
+      padding: 13px 0;
+      padding-right: 34px;
+      white-space: nowrap;
+      animation: marquee 42s linear infinite;
+    }
+    .ticker:hover .ticker-track { animation-play-state: paused; }
+    .ticker-track span {
+      font-family: var(--font-mono);
+      font-size: 0.67rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--faint);
+    }
+    .ticker-track i {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--accent);
+      opacity: 0.55;
+    }
+
+    /* -------------------------------- sections -------------------------------- */
+    .section { padding-top: 116px; }
+    .section:last-of-type { padding-bottom: 116px; }
+
+    .section-head {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(260px, 370px);
+      gap: 32px 56px;
+      align-items: end;
+      padding-bottom: 26px;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 38px;
+    }
+    .kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+      font-family: var(--font-mono);
+      font-size: 0.64rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+    .kicker::before {
+      content: "";
+      width: 18px;
+      height: 1px;
+      background: currentColor;
+      opacity: 0.65;
+    }
+    .section-head h2,
+    .contact h2 {
+      margin: 0;
+      font-size: clamp(2.35rem, 4.5vw, 3.75rem);
+      line-height: 1;
+      letter-spacing: -0.045em;
+      font-weight: 600;
+      text-wrap: balance;
+    }
+    .section-head h2 em,
+    .contact h2 em {
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      color: var(--accent);
+    }
+    .section-head > p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.6;
+      text-wrap: pretty;
+    }
+
+    /* -------------------------------- projects -------------------------------- */
+    .project {
+      --mx: 50%;
+      --my: 0%;
+      position: relative;
+      display: grid;
+      grid-template-columns: minmax(0, 1.02fr) minmax(0, 0.98fr);
+      margin-bottom: 22px;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      overflow: hidden;
+      background:
+        radial-gradient(560px circle at var(--mx) var(--my), rgba(125, 211, 220, 0.07), transparent 45%),
+        linear-gradient(180deg, var(--panel), var(--bg-soft));
+      transition: border-color 0.35s ease, transform 0.35s ease, box-shadow 0.35s ease;
+    }
+    .project:hover {
+      border-color: color-mix(in srgb, var(--accent) 32%, var(--line));
+      transform: translateY(-2px);
+      box-shadow: 0 26px 70px -40px rgba(0, 0, 0, 0.75);
+    }
+    .project::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 55%, transparent), transparent);
+      opacity: 0;
+      transition: opacity 0.35s ease;
+      z-index: 2;
+    }
+    .project:hover::before { opacity: 1; }
+
+    .project-copy {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: center;
+      padding: clamp(32px, 4.4vw, 54px);
+    }
+    .project-index {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      margin-bottom: 20px;
+      font-family: var(--font-mono);
+      font-size: 0.62rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--faint);
+    }
+    .project-index::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 12%, transparent);
+    }
+    .project h3 {
+      margin: 0 0 6px;
+      font-size: clamp(2rem, 3.3vw, 2.9rem);
+      line-height: 1.05;
+      letter-spacing: -0.045em;
       font-weight: 600;
     }
+    .project-tag {
+      margin: 0 0 18px;
+      color: var(--text);
+      font-size: clamp(1rem, 1.3vw, 1.12rem);
+      line-height: 1.45;
+      font-weight: 500;
+      letter-spacing: -0.012em;
+    }
+    .project p:not(.project-tag) {
+      margin: 0 0 22px;
+      color: var(--muted);
+      font-size: 0.94rem;
+      line-height: 1.68;
+      max-width: 36rem;
+      text-wrap: pretty;
+    }
+    .project p strong { color: var(--text); font-weight: 600; }
 
-    .grid {
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 0 0 28px;
+      padding: 0;
+      list-style: none;
+    }
+    .tags li {
+      padding: 4px 9px;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      background: color-mix(in srgb, var(--panel) 70%, transparent);
+      color: var(--faint);
+      font-family: var(--font-mono);
+      font-size: 0.61rem;
+      letter-spacing: 0.03em;
+      line-height: 1.5;
+    }
+
+    .project-links {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 18px;
+      margin-top: auto;
+    }
+    .project-note {
+      margin-top: 18px;
+      color: var(--faint);
+      font-family: var(--font-mono);
+      font-size: 0.61rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .project-visual {
+      position: relative;
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      place-items: center;
+      min-height: 440px;
+      padding: clamp(28px, 3.6vw, 48px);
+      border-left: 1px solid var(--line);
+      background:
+        radial-gradient(420px 320px at 60% 40%, rgba(125, 211, 220, 0.075), transparent 70%),
+        var(--bg-soft);
+      overflow: hidden;
+    }
+    .project-visual::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(147, 162, 170, 0.07) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(147, 162, 170, 0.07) 1px, transparent 1px);
+      background-size: 42px 42px;
+      -webkit-mask-image: radial-gradient(ellipse at center, #000 15%, transparent 72%);
+      mask-image: radial-gradient(ellipse at center, #000 15%, transparent 72%);
+      pointer-events: none;
+    }
+    .project--alt .project-visual {
+      order: -1;
+      border-left: 0;
+      border-right: 1px solid var(--line);
+    }
+
+    /* terminal mock */
+    .term {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 420px;
+      border: 1px solid #223038;
+      border-radius: 11px;
+      background: #090e11;
+      box-shadow: 0 28px 60px -28px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      transform: rotate(-1.2deg);
+      transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+      overflow: hidden;
+    }
+    .project:hover .term { transform: rotate(0deg) translateY(-2px); }
+    .term-top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 13px;
+      border-bottom: 1px solid #223038;
+      background: rgba(255, 255, 255, 0.018);
+      font-family: var(--font-mono);
+      font-size: 0.6rem;
+      letter-spacing: 0.03em;
+      color: #7f919a;
+    }
+    .term-dots { display: inline-flex; gap: 5px; margin-right: 3px; }
+    .term-dots i { width: 7px; height: 7px; border-radius: 50%; background: #26343c; }
+    .term-top .term-job { margin-left: auto; color: #5c6c74; }
+    .term-body { padding: 18px 17px 16px; }
+    .term-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+      font-family: var(--font-mono);
+      font-size: 0.58rem;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+      color: #687982;
+    }
+    .term-state {
+      padding: 2px 7px;
+      border: 1px solid rgba(110, 231, 168, 0.28);
+      border-radius: 4px;
+      color: #7ee2ad;
+      background: rgba(110, 231, 168, 0.07);
+      font-size: 0.53rem;
+      letter-spacing: 0.08em;
+    }
+    .pipe { margin: 0; padding: 0; list-style: none; }
+    .pipe li {
+      display: grid;
+      grid-template-columns: 16px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 9px;
+      padding: 7px 0;
+      color: #5c6c74;
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      line-height: 1.35;
+      border-bottom: 1px solid rgba(34, 48, 56, 0.55);
+    }
+    .pipe li:last-child { border-bottom: 0; }
+    .pipe .step-mark {
+      display: grid;
+      place-items: center;
+      width: 14px;
+      height: 14px;
+      border: 1px solid #2a3a43;
+      border-radius: 50%;
+      font-size: 0.52rem;
+      color: transparent;
+    }
+    .pipe .done { color: #9aabb3; }
+    .pipe .done .step-mark { border-color: rgba(125, 211, 220, 0.45); color: var(--accent); background: rgba(125, 211, 220, 0.08); }
+    .pipe .active { color: var(--accent); }
+    .pipe .active .step-mark {
+      border-color: var(--accent);
+      background: rgba(125, 211, 220, 0.14);
+      box-shadow: 0 0 12px rgba(125, 211, 220, 0.35);
+      animation: breathe 2.2s ease-in-out infinite;
+    }
+    .pipe .step-state { font-size: 0.54rem; letter-spacing: 0.08em; text-transform: uppercase; color: #52626a; }
+    .pipe .done .step-state { color: #6f858f; }
+    .pipe .active .step-state { color: var(--accent); }
+
+    .progress-wrap { margin-top: 16px; }
+    .progress {
+      height: 3px;
+      border-radius: 99px;
+      background: #18232a;
+      overflow: hidden;
+    }
+    .progress i {
+      display: block;
+      width: 63%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, rgba(125, 211, 220, 0.5), var(--accent));
+      box-shadow: 0 0 12px rgba(125, 211, 220, 0.5);
+    }
+    .progress-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 8px;
+      font-family: var(--font-mono);
+      font-size: 0.55rem;
+      letter-spacing: 0.04em;
+      color: #687982;
+    }
+
+    /* quote mock */
+    .quote-card {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 390px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: color-mix(in srgb, var(--panel) 92%, transparent);
+      box-shadow: var(--shadow);
+      transform: rotate(1deg);
+      transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+      overflow: hidden;
+    }
+    .project:hover .quote-card { transform: rotate(0deg) translateY(-2px); }
+    .quote-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--line);
+      font-family: var(--font-mono);
+      font-size: 0.57rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--faint);
+    }
+    .quote-top span:last-child { color: var(--accent); }
+    .quote-body { padding: 8px 16px; }
+    .quote-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--line);
+      font-size: 0.8rem;
+    }
+    .quote-row:last-child { border-bottom: 0; }
+    .quote-row span {
+      font-family: var(--font-mono);
+      font-size: 0.58rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--faint);
+    }
+    .quote-row b { font-weight: 600; letter-spacing: -0.01em; }
+    .quote-foot {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 12px 16px;
+      border-top: 1px solid var(--line);
+      background: color-mix(in srgb, var(--bg-soft) 55%, transparent);
+      color: var(--muted);
+      font-size: 0.7rem;
+    }
+    .quote-foot .mono { color: var(--accent); font-size: 0.57rem; text-transform: uppercase; letter-spacing: 0.08em; }
+    /* ---------------------------------- about ---------------------------------- */
+    .about-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.14fr) minmax(0, 0.86fr);
+      gap: clamp(40px, 6vw, 80px);
+      align-items: start;
+    }
+    .about-lede {
+      margin: 0 0 24px;
+      font-family: var(--font-serif);
+      font-size: clamp(2rem, 3.4vw, 2.9rem);
+      line-height: 1.1;
+      letter-spacing: -0.025em;
+      font-weight: 400;
+    }
+    .about-lede em { color: var(--accent); }
+    .about-main p {
+      margin: 0 0 18px;
+      max-width: 40rem;
+      color: var(--muted);
+      font-size: 1rem;
+      line-height: 1.72;
+      text-wrap: pretty;
+    }
+    .about-main p strong { color: var(--text); font-weight: 600; }
+
+    .lab-note {
+      display: flex;
+      gap: 14px;
+      margin-top: 28px;
+      padding: 16px 18px;
+      border: 1px solid var(--line);
+      border-left: 2px solid var(--accent);
+      border-radius: 0 8px 8px 0;
+      background: var(--panel);
+    }
+    .lab-note .mono { flex: none; color: var(--accent); font-size: 0.6rem; letter-spacing: 0.06em; padding-top: 3px; }
+    .lab-note p { margin: 0; color: var(--muted); font-size: 0.86rem; line-height: 1.6; }
+
+    .principles { padding-top: 4px; }
+    .principles > .mono {
+      display: block;
+      margin-bottom: 20px;
+      color: var(--faint);
+      font-size: 0.61rem;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+    }
+    .principles ol { margin: 0; padding: 0; list-style: none; }
+    .principles li {
+      display: grid;
+      grid-template-columns: 28px minmax(0, 1fr);
+      gap: 12px;
+      padding: 17px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .principles li:first-child { border-top: 1px solid var(--line); }
+    .principles .num {
+      font-family: var(--font-mono);
+      font-size: 0.62rem;
+      color: var(--accent);
+      padding-top: 4px;
+    }
+    .principles h3 {
+      margin: 0 0 3px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+    .principles p { margin: 0; color: var(--muted); font-size: 0.84rem; line-height: 1.55; }
+
+    .toolbox {
+      display: grid;
+      grid-template-columns: 160px minmax(0, 1fr);
+      gap: 24px 36px;
+      align-items: start;
+      margin-top: 64px;
+      padding-top: 28px;
+      border-top: 1px solid var(--line);
+    }
+    .toolbox .mono { color: var(--faint); font-size: 0.61rem; letter-spacing: 0.13em; text-transform: uppercase; padding-top: 7px; }
+    .stack { display: flex; flex-wrap: wrap; gap: 7px; margin: 0; padding: 0; list-style: none; }
+    .stack li {
+      padding: 6px 11px;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      background: var(--panel);
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 0.66rem;
+      line-height: 1.4;
+      transition: color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+    }
+    .stack li:hover {
+      color: var(--accent);
+      border-color: color-mix(in srgb, var(--accent) 38%, var(--line));
+      transform: translateY(-1px);
+    }
+
+    /* ---------------------------------- links ---------------------------------- */
+    .links-list { border-top: 1px solid var(--line); }
+    .link-row {
+      position: relative;
+      display: grid;
+      grid-template-columns: 40px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 20px;
+      padding: 24px 4px;
+      border-bottom: 1px solid var(--line);
+      color: var(--text);
+      text-decoration: none;
+      transition: padding-left 0.3s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.3s ease;
+    }
+    a.link-row:hover { padding-left: 16px; background: color-mix(in srgb, var(--panel) 45%, transparent); }
+    .link-num { font-family: var(--font-mono); font-size: 0.63rem; color: var(--faint); letter-spacing: 0.06em; }
+    .link-main { min-width: 0; }
+    .link-title {
+      display: block;
+      font-size: clamp(1.22rem, 2vw, 1.55rem);
+      font-weight: 600;
+      letter-spacing: -0.025em;
+      line-height: 1.25;
+    }
+    .link-desc { display: block; margin-top: 3px; color: var(--muted); font-size: 0.86rem; line-height: 1.5; }
+    .link-meta {
+      display: flex;
+      align-items: center;
       gap: 16px;
     }
-
-    .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 16px 18px;
+    .link-domain {
+      display: none;
+      font-family: var(--font-mono);
+      font-size: 0.62rem;
+      color: var(--faint);
+      letter-spacing: 0.02em;
     }
-
-    .card a {
-      text-decoration: none;
-      color: var(--text);
-      display: block;
-      font-weight: 500;
-    }
-
-    .card p {
-      margin: 6px 0 0;
-      font-size: 0.9rem;
+    .link-arrow {
+      display: grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 50%;
       color: var(--muted);
+      transition: color 0.25s ease, background-color 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
     }
+    .link-arrow svg { width: 15px; height: 15px; }
+    a.link-row:hover .link-arrow,
+    .email-row:hover .link-arrow {
+      color: var(--accent-ink);
+      background: var(--accent);
+      border-color: var(--accent);
+      transform: translate(2px, -2px);
+    }
+    .email-row { cursor: default; }
+    .email-row .link-main { color: var(--text); text-decoration: none; }
+    .email-row .link-main:hover .link-title { color: var(--accent); }
 
-    footer {
-      text-align: center;
+    .copy-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 38px;
+      padding: 7px 12px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 0.62rem;
+      letter-spacing: 0.04em;
+      transition: color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+    }
+    .copy-btn:hover { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); background: var(--panel); }
+    .copy-btn.copied { color: var(--accent); border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+    .copy-btn svg { width: 13px; height: 13px; }
+
+    .contact {
+      position: relative;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 36px;
+      margin-top: 72px;
+      padding: clamp(28px, 4.5vw, 52px);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      overflow: hidden;
+      background:
+        radial-gradient(620px 280px at 82% -10%, rgba(125, 211, 220, 0.12), transparent 68%),
+        linear-gradient(180deg, var(--panel), var(--bg-soft));
+    }
+    .contact::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(147, 162, 170, 0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(147, 162, 170, 0.06) 1px, transparent 1px);
+      background-size: 40px 40px;
+      -webkit-mask-image: radial-gradient(ellipse at 80% 0%, #000, transparent 62%);
+      mask-image: radial-gradient(ellipse at 80% 0%, #000, transparent 62%);
+    }
+    .contact > * { position: relative; z-index: 1; }
+    .contact h2 { font-size: clamp(2rem, 3.7vw, 3rem); margin-bottom: 10px; }
+    .contact p { margin: 0; max-width: 30rem; color: var(--muted); font-size: 0.95rem; }
+    .contact .btn { flex: none; }
+
+    /* --------------------------------- footer --------------------------------- */
+    footer { border-top: 1px solid var(--line); background: var(--bg-soft); }
+    .footer-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      padding-top: 40px;
+      padding-bottom: 30px;
+    }
+    .to-top {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
       font-size: 0.8rem;
-      color: var(--muted);
-      padding: 36px 0 30px;
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+    .to-top:hover { color: var(--accent); }
+    .to-top svg { width: 14px; height: 14px; }
+    .footer-bottom {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 10px 26px;
+      padding-top: 18px;
+      padding-bottom: 34px;
+      border-top: 1px solid var(--line);
+      color: var(--faint);
+      font-family: var(--font-mono);
+      font-size: 0.58rem;
+      letter-spacing: 0.04em;
+    }
+
+    /* -------------------------------- motion --------------------------------- */
+    @keyframes breathe {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.45; transform: scale(0.82); }
+    }
+    @keyframes packet {
+      0% { transform: translateY(0); opacity: 0; }
+      12% { opacity: 1; }
+      88% { opacity: 1; }
+      100% { transform: translateY(24px); opacity: 0; }
+    }
+    @keyframes dash { to { stroke-dashoffset: -16; } }
+    @keyframes marquee { to { transform: translateX(-100%); } }
+
+    .js .reveal {
+      opacity: 0;
+      transform: translateY(20px);
+      transition:
+        opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+        transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+      transition-delay: var(--d, 0s);
+    }
+    .js .reveal.in { opacity: 1; transform: none; }
+
+    /* ------------------------------- responsive ------------------------------- */
+    @media (min-width: 1000px) {
+      .link-domain { display: inline; }
+    }
+
+    @media (max-width: 980px) {
+      .hero {
+        grid-template-columns: 1fr;
+        min-height: 0;
+        gap: 48px;
+        padding-top: 58px;
+        padding-bottom: 70px;
+      }
+      .hero-visual { justify-content: flex-start; }
+      .sys-card { max-width: 560px; }
+      .section-head { grid-template-columns: 1fr; gap: 18px; }
+      .section-head > p { max-width: 38rem; }
+      .project { grid-template-columns: 1fr; }
+      .project-visual,
+      .project--alt .project-visual {
+        order: 0;
+        min-height: 370px;
+        border-left: 0;
+        border-right: 0;
+        border-top: 1px solid var(--line);
+      }
+      .about-grid { grid-template-columns: 1fr; gap: 44px; }
+    }
+
+    @media (max-width: 860px) {
+      .nav { flex-wrap: wrap; gap: 12px 20px; padding-top: 13px; padding-bottom: 13px; }
+      .nav-links {
+        order: 3;
+        width: 100%;
+        margin-left: 0;
+        gap: 2px;
+        padding-top: 9px;
+        border-top: 1px solid var(--line);
+      }
+      .nav-links a { padding: 6px 9px; font-size: 0.8rem; }
+      .nav-links a:first-child { margin-left: -9px; }
+      .nav-actions { margin-left: auto; }
+      .brand-sub { display: none; }
+      .toolbox { grid-template-columns: 1fr; gap: 14px; }
+      .toolbox .mono { padding-top: 0; }
+    }
+
+    @media (max-width: 720px) {
+      .wrap { padding-inline: 22px; }
+      .section { padding-top: 84px; }
+      .section:last-of-type { padding-bottom: 84px; }
+      .hero h1 { font-size: clamp(2.85rem, 13.5vw, 4rem); }
+      .hero-cta .btn { flex: 1 1 auto; }
+      .hero-meta { font-size: 0.63rem; gap: 8px 16px; }
+      .hero-meta span + span::before { margin-right: 8px; }
+      .project-copy { padding: 30px 24px 34px; }
+      .project-visual { min-height: 330px; padding: 28px 20px; }
+      .project-links { gap: 14px; }
+      .contact { flex-direction: column; align-items: flex-start; gap: 24px; }
+      .contact .btn { width: 100%; }
+      .link-row { grid-template-columns: 30px minmax(0, 1fr) auto; gap: 12px; padding: 20px 2px; }
+      .link-arrow { width: 34px; height: 34px; }
+      .footer-bottom { flex-direction: column; }
+    }
+
+    @media (max-width: 480px) {
+      .nav-actions .btn-sm { display: none; }
+      .mark { width: 34px; height: 34px; font-size: 1.4rem; }
+      .hero-meta span:nth-child(3) { display: none; }
+      .sys-map { padding-inline: 14px; }
+      .node { min-width: 126px; }
+      .node-core { min-width: 158px; }
+      .quote-card, .term { max-width: 100%; }
+      .quote-row { font-size: 0.75rem; }
+      .link-desc { font-size: 0.82rem; }
+      .copy-btn span { display: none; }
+      .copy-btn { padding: 8px; }
+      .footer-top { flex-wrap: wrap; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+      .js .reveal { opacity: 1; transform: none; }
     }
   </style>
 </head>
-
 <body>
+<a class="skip" href="#main">Skip to content</a>
 
-<header>
-  <nav>
-    <div class="brand">benmoyer.org</div>
-    <div class="nav-links">
-      <a href="https://github.com/Bamoyski" target="_blank">GitHub</a>
+<header class="site-head">
+  <div class="wrap nav">
+    <a class="brand" href="#top">
+      <span class="mark" aria-hidden="true">B</span>
+      <span class="brand-text">Ben Moyer<span class="brand-sub">builder / operator</span></span>
+    </a>
 
-      <a href="https://uptime.benmoyer.org/status/home" target="_blank">Uptime</a>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="#work">Work</a>
+      <a href="#about">About</a>
+      <a href="#links">Links</a>
+    </nav>
+
+    <div class="nav-actions">
+      <button class="icon-btn" id="theme-toggle" type="button" aria-label="Switch to light theme" title="Switch theme">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="4"></circle>
+          <path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41"></path>
+        </svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5a8.5 8.5 0 1 0 10.7 10.7Z"></path>
+        </svg>
+      </button>
+      <a class="btn btn-sm" href="mailto:bamoyskistudios@gmail.com">
+        Get in touch
+        <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"></path></svg>
+      </a>
     </div>
-  </nav>
+  </div>
 </header>
 
-<main>
+<main id="main">
+  <section class="hero wrap" id="top" aria-labelledby="hero-title">
+    <div class="hero-copy reveal">
+      <div class="eyebrow">
+        <span class="dot" aria-hidden="true"></span>
+        Ben Moyer — infrastructure &amp; interface
+      </div>
 
-  <div class="hero">
-    <h1>Ben Moyer</h1>
-  </div>
+      <h1 id="hero-title">I build the<br>boring parts<br><em>beautifully.</em></h1>
 
-  <section>
-    <h2>Links</h2>
-    <div class="grid">
+      <p class="lede">
+        Proxmox homelab operator, author of <a href="https://github.com/Bamoyski/ProxVM" target="_blank" rel="noopener">ProxVM</a>, and founder of <a href="https://bamoyski-studios.pages.dev" target="_blank" rel="noopener">Bamoyski Studios</a>. I turn self-hosted infrastructure into tools people actually want to use.
+      </p>
 
-      <div class="card">
-        <a href="https://github.com/Bamoyski" target="_blank">
+      <div class="hero-cta">
+        <a class="btn" href="#work">
+          See selected work
+          <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+        </a>
+        <a class="btn btn-ghost" href="https://github.com/Bamoyski" target="_blank" rel="noopener">
           GitHub
-          <p>Code and documentation</p>
+          <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"></path></svg>
         </a>
       </div>
 
+      <div class="hero-meta">
+        <span><i class="status-dot" aria-hidden="true"></i> Building ProxVM</span>
+        <span>Self-hosted by default</span>
+        <span>Open source where it counts</span>
+      </div>
+    </div>
+
+    <div class="hero-visual reveal" style="--d: 0.12s">
+      <div class="sys-card" role="img" aria-label="Diagram of a self-hosted infrastructure stack: internet, Cloudflare edge, the ProxVM control plane, Proxmox VE compute, and Apache Guacamole access.">
+        <div class="sys-top">
+          <span>/ homelab / topology</span>
+          <span class="live"><i aria-hidden="true"></i> live</span>
+        </div>
+
+        <div class="sys-map">
+          <div class="node-row">
+            <span class="node">internet<small>the outside world</small></span>
+          </div>
+          <div class="wire" aria-hidden="true"></div>
+          <div class="node-row">
+            <span class="node node-edge">cloudflare<small>edge &amp; tunnel</small></span>
+          </div>
+          <div class="wire" aria-hidden="true"></div>
+          <div class="node-row">
+            <span class="node node-core">proxvm<small>control plane</small></span>
+          </div>
+
+          <svg class="fork" viewBox="0 0 400 46" preserveAspectRatio="none" aria-hidden="true">
+            <path d="M200 0 V16 H90 V46"></path>
+            <path d="M200 0 V16 H310 V46"></path>
+          </svg>
+
+          <div class="node-row split">
+            <span class="node">proxmox ve<small>compute</small></span>
+            <span class="node">guacamole<small>access</small></span>
+          </div>
+        </div>
+
+        <div class="sys-foot">
+          <span>self-hosted</span>
+          <span>encrypted</span>
+          <span>audited</span>
+        </div>
+      </div>
     </div>
   </section>
 
+  <div class="ticker" aria-hidden="true">
+    <div class="ticker-track">
+      <span>TypeScript</span><i></i><span>React</span><i></i><span>Fastify</span><i></i><span>PostgreSQL</span><i></i><span>Redis</span><i></i><span>Docker</span><i></i><span>Proxmox VE</span><i></i><span>Cloudflare</span><i></i><span>Linux</span><i></i><span>Apache Guacamole</span><i></i><span>BullMQ</span><i></i><span>Vite</span><i></i>
+    </div>
+    <div class="ticker-track">
+      <span>TypeScript</span><i></i><span>React</span><i></i><span>Fastify</span><i></i><span>PostgreSQL</span><i></i><span>Redis</span><i></i><span>Docker</span><i></i><span>Proxmox VE</span><i></i><span>Cloudflare</span><i></i><span>Linux</span><i></i><span>Apache Guacamole</span><i></i><span>BullMQ</span><i></i><span>Vite</span><i></i>
+    </div>
+  </div>
+
+  <section class="wrap section" id="work" aria-labelledby="work-title">
+    <div class="section-head reveal">
+      <div>
+        <span class="kicker">01 / Selected work</span>
+        <h2 id="work-title">Things I've built.</h2>
+      </div>
+      <p>Two projects that explain most of what I care about: real infrastructure, honest interfaces, and systems you can own.</p>
+    </div>
+
+    <article class="project reveal" id="proxvm">
+      <div class="project-copy">
+        <span class="project-index">001 / flagship</span>
+        <h3>ProxVM</h3>
+        <p class="project-tag">VM management for Proxmox VE &amp; Apache Guacamole.</p>
+        <p>ProxVM turns a homelab into a real control plane: cloud-init provisioning, a credential vault, role-based access, and RDP/SSH/VNC sessions — all against actual Proxmox and Guacamole. <strong>No mock data, no simulated infrastructure.</strong></p>
+
+        <ul class="tags" aria-label="Technologies used">
+          <li>TypeScript</li>
+          <li>React</li>
+          <li>Fastify</li>
+          <li>PostgreSQL</li>
+          <li>Redis</li>
+          <li>Docker</li>
+        </ul>
+
+        <div class="project-links">
+          <a class="btn" href="https://github.com/Bamoyski/ProxVM" target="_blank" rel="noopener">
+            View repository
+            <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"></path></svg>
+          </a>
+          <a class="text-link" href="https://github.com/Bamoyski/ProxVM#readme" target="_blank" rel="noopener">
+            Read the README
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+          </a>
+        </div>
+        <p class="project-note">MIT licensed · no telemetry · self-hosted by design</p>
+      </div>
+
+      <div class="project-visual" aria-hidden="true">
+        <div class="term">
+          <div class="term-top">
+            <span class="term-dots"><i></i><i></i><i></i></span>
+            <span>provision / vm-web-01</span>
+            <span class="term-job">#4821</span>
+          </div>
+          <div class="term-body">
+            <div class="term-title">
+              <span>job pipeline</span>
+              <span class="term-state">running</span>
+            </div>
+            <ol class="pipe">
+              <li class="done"><span class="step-mark">✓</span><span>validate proxmox resources</span><span class="step-state">ok</span></li>
+              <li class="done"><span class="step-mark">✓</span><span>clone template</span><span class="step-state">ok</span></li>
+              <li class="done"><span class="step-mark">✓</span><span>configure cloud-init</span><span class="step-state">ok</span></li>
+              <li class="active"><span class="step-mark">•</span><span>wait for guest agent</span><span class="step-state">wait</span></li>
+              <li><span class="step-mark"></span><span>create guacamole connection</span><span class="step-state">queued</span></li>
+              <li><span class="step-mark"></span><span>verify &amp; mark ready</span><span class="step-state">queued</span></li>
+            </ol>
+            <div class="progress-wrap">
+              <div class="progress"><i></i></div>
+              <div class="progress-meta"><span>real vm · real ip · real session</span><span>63%</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <article class="project project--alt reveal" id="studio">
+      <div class="project-copy">
+        <span class="project-index">002 / venture</span>
+        <h3>Bamoyski Studios</h3>
+        <p class="project-tag">Game servers and homelab VMs on hardware I own.</p>
+        <p>Bamoyski Studios provisions game servers and VMs on real Proxmox nodes, puts Cloudflare in front, and hands you the keys. Quoted by hand, locked for a year, and supported by the person who runs the machines.</p>
+
+        <ul class="tags" aria-label="What the studio offers">
+          <li>Proxmox VE</li>
+          <li>Cloudflare</li>
+          <li>Game servers</li>
+          <li>Homelab VMs</li>
+        </ul>
+
+        <div class="project-links">
+          <a class="btn" href="https://bamoyski-studios.pages.dev" target="_blank" rel="noopener">
+            Visit the studio
+            <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"></path></svg>
+          </a>
+          <a class="text-link" href="mailto:bamoyskistudios@gmail.com?subject=Hosting%20inquiry">
+            Ask for a quote
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+          </a>
+        </div>
+        <p class="project-note">Currently in testing with a small group.</p>
+      </div>
+
+      <div class="project-visual" aria-hidden="true">
+        <div class="quote-card">
+          <div class="quote-top">
+            <span>quote / valheim</span>
+            <span>10 players</span>
+          </div>
+          <div class="quote-body">
+            <div class="quote-row"><span>compute</span><b>4 vCPU · 8 GB RAM</b></div>
+            <div class="quote-row"><span>disk</span><b>80 GB SSD</b></div>
+            <div class="quote-row"><span>network</span><b>Cloudflare edge</b></div>
+            <div class="quote-row"><span>access</span><b>Your ProxVM login</b></div>
+            <div class="quote-row"><span>support</span><b>Panel tickets + email</b></div>
+          </div>
+          <div class="quote-foot">
+            <span>one fixed number, locked for 12 months.</span>
+            <span class="mono">→</span>
+          </div>
+        </div>
+      </div>
+    </article>
+  </section>
+  <section class="wrap section" id="about" aria-labelledby="about-title">
+    <div class="section-head reveal">
+      <div>
+        <span class="kicker">02 / About</span>
+        <h2 id="about-title">The person behind the uptime.</h2>
+      </div>
+      <p>A short version of how I got here, and what I keep chasing.</p>
+    </div>
+
+    <div class="about-grid">
+      <div class="about-main reveal">
+        <p class="about-lede">I like the part where it becomes <em>real.</em></p>
+        <p>Most of what I know came from breaking things in my own lab and rebuilding them until they held. That's still the loop: <strong>read the docs, trace the failure, ship the fix, write it down.</strong></p>
+        <p>Today I'm building ProxVM, an open-source control plane for Proxmox VE and Apache Guacamole, and running Bamoyski Studios, where I host game servers and homelab VMs on hardware I own. No oversold slices, no ticket queue between you and the person who runs the machines.</p>
+
+        <div class="lab-note">
+          <span class="mono">~/homelab</span>
+          <p>Proxmox VE, Cloudflare in front, PostgreSQL and Redis behind it, and a lab that exists to be broken and rebuilt.</p>
+        </div>
+      </div>
+
+      <aside class="principles reveal" style="--d: 0.1s" aria-label="What I optimize for">
+        <span class="mono">What I optimize for</span>
+        <ol>
+          <li>
+            <span class="num">01</span>
+            <div>
+              <h3>Truth over polish</h3>
+              <p>Real errors beat fake loading states. If something is down, say so and show why.</p>
+            </div>
+          </li>
+          <li>
+            <span class="num">02</span>
+            <div>
+              <h3>Own the stack</h3>
+              <p>Self-hosted where it makes sense. Know where the data lives and who can touch it.</p>
+            </div>
+          </li>
+          <li>
+            <span class="num">03</span>
+            <div>
+              <h3>Make it legible</h3>
+              <p>Infrastructure and interfaces should explain themselves without a manual.</p>
+            </div>
+          </li>
+        </ol>
+      </aside>
+    </div>
+
+    <div class="toolbox reveal">
+      <span class="mono">Daily drivers</span>
+      <ul class="stack" aria-label="Tools and technologies">
+        <li>TypeScript</li>
+        <li>React</li>
+        <li>Vite</li>
+        <li>Tailwind</li>
+        <li>Fastify</li>
+        <li>PostgreSQL</li>
+        <li>Redis</li>
+        <li>BullMQ</li>
+        <li>Docker</li>
+        <li>Proxmox VE</li>
+        <li>Cloudflare</li>
+        <li>Linux</li>
+        <li>Apache Guacamole</li>
+        <li>Git</li>
+      </ul>
+    </div>
+  </section>
+  <section class="wrap section" id="links" aria-labelledby="links-title">
+    <div class="section-head reveal">
+      <div>
+        <span class="kicker">03 / Elsewhere</span>
+        <h2 id="links-title">Find me on the internet.</h2>
+      </div>
+      <p>The short list. Everything else is probably running in the lab.</p>
+    </div>
+
+    <div class="links-list reveal">
+      <a class="link-row" href="https://github.com/Bamoyski" target="_blank" rel="noopener">
+        <span class="link-num">01</span>
+        <span class="link-main">
+          <span class="link-title">GitHub</span>
+          <span class="link-desc">Code, commits, and the occasional experiment.</span>
+        </span>
+        <span class="link-meta">
+          <span class="link-domain">github.com/Bamoyski</span>
+          <span class="link-arrow">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"></path></svg>
+          </span>
+        </span>
+      </a>
+
+      <a class="link-row" href="https://github.com/Bamoyski/ProxVM" target="_blank" rel="noopener">
+        <span class="link-num">02</span>
+        <span class="link-main">
+          <span class="link-title">ProxVM</span>
+          <span class="link-desc">The flagship repository. Real infrastructure, no mock data.</span>
+        </span>
+        <span class="link-meta">
+          <span class="link-domain">github.com/Bamoyski/ProxVM</span>
+          <span class="link-arrow">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"></path></svg>
+          </span>
+        </span>
+      </a>
+
+      <a class="link-row" href="https://bamoyski-studios.pages.dev" target="_blank" rel="noopener">
+        <span class="link-num">03</span>
+        <span class="link-main">
+          <span class="link-title">Bamoyski Studios</span>
+          <span class="link-desc">Game servers and homelab VMs on hardware I own.</span>
+        </span>
+        <span class="link-meta">
+          <span class="link-domain">bamoyski-studios.pages.dev</span>
+          <span class="link-arrow">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"></path></svg>
+          </span>
+        </span>
+      </a>
+
+      <div class="link-row email-row">
+        <span class="link-num">04</span>
+        <a class="link-main" href="mailto:bamoyskistudios@gmail.com">
+          <span class="link-title">Email</span>
+          <span class="link-desc">The fastest way to reach me: bamoyskistudios@gmail.com</span>
+        </a>
+        <span class="link-meta">
+          <button class="copy-btn" type="button" data-copy="bamoyskistudios@gmail.com" aria-label="Copy email address" aria-live="polite">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            <span>Copy</span>
+          </button>
+          <a class="link-arrow" href="mailto:bamoyskistudios@gmail.com" aria-label="Send an email to Ben Moyer">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"></path></svg>
+          </a>
+        </span>
+      </div>
+    </div>
+
+    <div class="contact reveal">
+      <div>
+        <span class="kicker">Have a problem worth solving?</span>
+        <h2>Let's make something <em>solid.</em></h2>
+        <p>Hosting, infrastructure, or a strange side project — my inbox is open.</p>
+      </div>
+      <a class="btn" href="mailto:bamoyskistudios@gmail.com">
+        Start a conversation
+        <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"></path></svg>
+      </a>
+    </div>
+  </section>
 </main>
 
+<footer>
+  <div class="wrap footer-top">
+    <a class="brand" href="#top">
+      <span class="mark" aria-hidden="true">B</span>
+      <span class="brand-text">Ben Moyer<span class="brand-sub">builder / operator</span></span>
+    </a>
+    <a class="to-top" href="#top">
+      Back to top
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"></path></svg>
+    </a>
+  </div>
+  <div class="wrap footer-bottom">
+    <span>© 2026 Ben Moyer</span>
+    <span>Hand-built with HTML, CSS &amp; JS</span>
+    <span>Hosted on Cloudflare</span>
+  </div>
+</footer>
+
+<script>
+(() => {
+  'use strict';
+
+  const root = document.documentElement;
+  const toggle = document.getElementById('theme-toggle');
+  const meta = document.querySelector('meta[name="theme-color"]');
+  const colors = { dark: '#070a0c', light: '#f4f1e9' };
+
+  function applyTheme(theme, persist) {
+    root.dataset.theme = theme;
+    if (meta) meta.setAttribute('content', colors[theme]);
+    if (toggle) {
+      const next = theme === 'dark' ? 'light' : 'dark';
+      toggle.setAttribute('aria-label', 'Switch to ' + next + ' theme');
+      toggle.setAttribute('title', 'Switch to ' + next + ' theme');
+    }
+    if (persist) {
+      try { localStorage.setItem('bm-theme', theme); } catch (error) { /* storage unavailable */ }
+    }
+  }
+
+  let saved = null;
+  try { saved = localStorage.getItem('bm-theme'); } catch (error) { /* storage unavailable */ }
+  applyTheme(saved === 'light' ? 'light' : 'dark', false);
+
+  if (toggle) {
+    toggle.addEventListener('click', () => {
+      applyTheme(root.dataset.theme === 'dark' ? 'light' : 'dark', true);
+    });
+  }
+
+  const copyBtn = document.querySelector('[data-copy]');
+  if (copyBtn) {
+    const label = copyBtn.querySelector('span');
+    let resetTimer;
+    copyBtn.addEventListener('click', async () => {
+      const value = copyBtn.dataset.copy;
+      let copied = false;
+      try {
+        await navigator.clipboard.writeText(value);
+        copied = true;
+      } catch (error) {
+        const field = document.createElement('textarea');
+        field.value = value;
+        field.setAttribute('readonly', '');
+        field.style.position = 'fixed';
+        field.style.opacity = '0';
+        document.body.appendChild(field);
+        field.select();
+        try { copied = document.execCommand('copy'); } catch (fallbackError) { copied = false; }
+        field.remove();
+      }
+      if (!copied) return;
+      copyBtn.classList.add('copied');
+      label.textContent = 'Copied';
+      clearTimeout(resetTimer);
+      resetTimer = setTimeout(() => {
+        copyBtn.classList.remove('copied');
+        label.textContent = 'Copy';
+      }, 1800);
+    });
+  }
+
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reveals = document.querySelectorAll('.reveal');
+  if (reduced || !('IntersectionObserver' in window)) {
+    reveals.forEach((element) => element.classList.add('in'));
+  } else {
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('in');
+          revealObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -6% 0px' });
+    reveals.forEach((element) => revealObserver.observe(element));
+  }
+
+  const navLinks = Array.from(document.querySelectorAll('.nav-links a'));
+  const sections = navLinks
+    .map((link) => document.querySelector(link.getAttribute('href')))
+    .filter(Boolean);
+
+  if ('IntersectionObserver' in window && sections.length) {
+    const spy = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        navLinks.forEach((link) => {
+          if (link.getAttribute('href') === '#' + entry.target.id) {
+            link.setAttribute('aria-current', 'true');
+          } else {
+            link.removeAttribute('aria-current');
+          }
+        });
+      });
+    }, { rootMargin: '-30% 0px -55% 0px', threshold: 0 });
+    sections.forEach((section) => spy.observe(section));
+  }
+
+  if (!reduced) {
+    document.querySelectorAll('.project').forEach((card) => {
+      card.addEventListener('pointermove', (event) => {
+        const rect = card.getBoundingClientRect();
+        card.style.setProperty('--mx', (event.clientX - rect.left) + 'px');
+        card.style.setProperty('--my', (event.clientY - rect.top) + 'px');
+      });
+    });
+  }
+})();
+</script>
 </body>
 </html>

@@ -1024,7 +1024,9 @@ footer {
 /* ------------------------------- responsive ------------------------------ */
 @media (max-width: 1080px) {
   /* a flex column gives the sticky viewport room to travel as the sheet
-     scrolls past, so the chassis can still come apart on a narrow screen */
+     scrolls past, so the chassis can still come apart on a narrow screen.
+     The stage becomes opaque to hide the text sliding under it, and the
+     canvas lifts above it so the model still draws into the viewport. */
   .sheet-body {
     display: flex;
     flex-direction: column;
@@ -1033,11 +1035,16 @@ footer {
   .sheet-stage {
     position: sticky;
     top: 62px;
-    z-index: 5;
+    z-index: 3;
     background: var(--bg);
     padding-bottom: 10px;
   }
-  .viewport { height: 320px; max-width: 420px; margin-inline: auto; }
+  .scene-layer { z-index: 4; }
+  .viewport {
+    height: 320px;
+    width: min(100%, 420px);
+    align-self: center;
+  }
   .about-grid { grid-template-columns: minmax(0, 1fr); gap: 32px; }
   .sheet-head { grid-template-columns: minmax(0, 1fr); }
   .contents-table .c-role, .contents-table .c-spec { display: none; }

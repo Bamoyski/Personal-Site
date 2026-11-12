@@ -995,7 +995,7 @@ footer {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 10px 28px;
   padding-block: 26px 0;
 }
 .footer-note {

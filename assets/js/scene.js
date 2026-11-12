@@ -19,6 +19,7 @@ import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 
 import { bakeEnvironment } from './studio.js';
+import { buildChassis } from './chassis.js';
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -83,6 +84,13 @@ const PLATES = {
   'optiplex-3090-sff': 'assets/img/machines/optiplex-3090-sff.png',
   'optiplex-7050-micro': 'assets/img/machines/optiplex-7050-micro.png',
   'thinkcentre-m910q': 'assets/img/machines/thinkcentre-m910q.png',
+};
+
+/** Which chassis model belongs to which plate. */
+const MODELS = {
+  'optiplex-3090-sff': 'sff',
+  'optiplex-7050-micro': 'micro',
+  'thinkcentre-m910q': 'tiny',
 };
 
 const PLATE_HEIGHT = 3.1;
@@ -172,13 +180,13 @@ export function createScene({ canvas, getFrame } = {}) {
   /* ------------------------------- lighting ------------------------------ */
   const envRT = bakeEnvironment(renderer, { theme: 'dark' });
   scene.environment = envRT.texture;
-  scene.environmentIntensity = 0.55;
+  scene.environmentIntensity = 0.72;
 
-  const key = new THREE.DirectionalLight(0xffffff, 1.6);
+  const key = new THREE.DirectionalLight(0xffffff, 3.4);
   key.position.set(4, 8, 6);
   scene.add(key);
 
-  const rim = new THREE.DirectionalLight(0xb8bcd4, 0.9);
+  const rim = new THREE.DirectionalLight(0xb8bcd4, 1.4);
   rim.position.set(-5, 3, -6);
   scene.add(rim);
 
@@ -187,6 +195,32 @@ export function createScene({ canvas, getFrame } = {}) {
   const textures = {};
   let currentKey = null;
   let loading = false;
+
+  /* --------------------------- exploded chassis -------------------------- */
+  let machine = null;
+  let machinePlate = null;
+  const machineMaterials = new Set();
+
+  function loadMachine(plateKey) {
+    const preset = MODELS[plateKey];
+    if (!preset || plateKey === machinePlate) return;
+    if (machine) {
+      stage.remove(machine.root);
+      machine.dispose();
+      machine = null;
+    }
+    machinePlate = plateKey;
+    machineMaterials.clear();
+    machine = buildChassis(preset, { detailed: !isSmall });
+    machine.root.traverse((object) => {
+      if (object.material) {
+        machineMaterials.add(object.material);
+        object.material.transparent = true;
+        object.material.opacity = 0;
+      }
+    });
+    stage.add(machine.root);
+  }
 
   function loadPlate(key) {
     if (key === currentKey || loading) return;
@@ -241,9 +275,13 @@ export function createScene({ canvas, getFrame } = {}) {
   const right = new THREE.Vector3();
   const up = new THREE.Vector3();
   const tmp = new THREE.Vector3();
+  const modelCentre = new THREE.Vector3();
+  const corners = Array.from({ length: 8 }, () => new THREE.Vector3());
+  const ndcBox = new THREE.Box2();
+  const scratch = new THREE.Vector3();
 
-  const state = { yaw: 0, pitch: 0, distance: 20, visible: false };
-  const target = { yaw: 0, pitch: 0, distance: 20, visible: false };
+  const state = { yaw: 0, pitch: 0, distance: 20, visible: false, explode: 0 };
+  const target = { yaw: 0, pitch: 0, distance: 20, visible: false, explode: 0 };
 
   /**
    * Frames the plate inside the on-screen viewport panel: the distance is
@@ -288,6 +326,76 @@ export function createScene({ canvas, getFrame } = {}) {
     camera.updateMatrixWorld();
   }
 
+  /**
+   * Frames the exploded chassis inside the on-screen viewport panel. The
+   * distance is solved so the projected bounding box fits the panel, then the
+   * camera is slid sideways so it lands exactly in the middle of it.
+   */
+  function frameModel(rect, W, H) {
+    if (!machine) return;
+    const ext = machine.halfExtents();
+    const c = ext.centre;
+    const pts = [
+      [-ext.x, -ext.y, -ext.z], [ext.x, -ext.y, -ext.z], [ext.x, ext.y, -ext.z], [-ext.x, ext.y, -ext.z],
+      [-ext.x, -ext.y, ext.z], [ext.x, -ext.y, ext.z], [ext.x, ext.y, ext.z], [-ext.x, ext.y, ext.z],
+    ];
+    modelCentre.copy(c).applyMatrix4(machine.root.matrixWorld);
+    pts.forEach((p, i) => corners[i].set(p[0], p[1], p[2]).applyMatrix4(machine.root.matrixWorld));
+
+    const tanV = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
+    // a technical three-quarter view, the angle an exploded diagram wants
+    const dir = new THREE.Vector3(
+      Math.sin(0.58) * Math.cos(0.5),
+      Math.sin(0.5),
+      Math.cos(0.58) * Math.cos(0.5)
+    );
+
+    let distance = 24;
+    for (let pass = 0; pass < 4; pass += 1) {
+      camPos.copy(dir).multiplyScalar(distance).add(modelCentre);
+      camera.position.copy(camPos);
+      camera.lookAt(modelCentre);
+      camera.updateMatrixWorld();
+      ndcBox.makeEmpty();
+      for (let i = 0; i < 8; i += 1) {
+        scratch.copy(corners[i]).project(camera);
+        ndcBox.expandByPoint(scratch);
+      }
+      const ndcW = Math.max(ndcBox.max.x - ndcBox.min.x, 0.0001);
+      const ndcH = Math.max(ndcBox.max.y - ndcBox.min.y, 0.0001);
+      const wantW = 2 * (rect.width / W);
+      const wantH = 2 * (rect.height / H);
+      const scale = Math.min(wantW / ndcW, wantH / ndcH) * 0.94;
+      distance = clamp(distance / scale, 6, 260);
+    }
+
+    camPos.copy(dir).multiplyScalar(distance).add(modelCentre);
+    camera.position.copy(camPos);
+    camera.lookAt(modelCentre);
+    camera.updateMatrixWorld();
+    ndcBox.makeEmpty();
+    for (let i = 0; i < 8; i += 1) {
+      scratch.copy(corners[i]).project(camera);
+      ndcBox.expandByPoint(scratch);
+    }
+
+    const ndcCentreX = (ndcBox.min.x + ndcBox.max.x) / 2;
+    const ndcCentreY = (ndcBox.min.y + ndcBox.max.y) / 2;
+    const wantX = ((rect.left + rect.width / 2) / W) * 2 - 1;
+    const wantY = 1 - ((rect.top + rect.height / 2) / H) * 2;
+
+    right.set(1, 0, 0).applyQuaternion(camera.quaternion);
+    up.set(0, 1, 0).applyQuaternion(camera.quaternion);
+
+    const shiftX = -(wantX - ndcCentreX) * distance * tanV * camera.aspect;
+    const shiftY = -(wantY - ndcCentreY) * distance * tanV;
+
+    camTarget.copy(modelCentre).addScaledVector(right, shiftX).addScaledVector(up, shiftY);
+    camera.position.copy(camPos).addScaledVector(right, shiftX).addScaledVector(up, shiftY);
+    camera.lookAt(camTarget);
+    camera.updateMatrixWorld();
+  }
+
   /* ---------------------------- post processing -------------------------- */
   let composer = null;
   let bloomPass = null;
@@ -317,10 +425,10 @@ export function createScene({ canvas, getFrame } = {}) {
   function setTheme(theme) {
     const dark = theme !== 'light';
     floor.material.color.setHex(dark ? 0x07080a : 0xd8d5ce);
-    floor.material.envMapIntensity = dark ? 0.2 : 0.45;
-    scene.environmentIntensity = dark ? 0.35 : 0.6;
-    key.intensity = dark ? 1.6 : 2.1;
-    rim.intensity = dark ? 0.9 : 0.6;
+    floor.material.envMapIntensity = dark ? 0.13 : 0.34;
+    scene.environmentIntensity = dark ? 0.72 : 0.95;
+    key.intensity = dark ? 3.4 : 3.9;
+    rim.intensity = dark ? 1.4 : 0.9;
     reflectionMaterial.opacity = dark ? 0.55 : 0.4;
     shadowMaterial.opacity = dark ? 0.85 : 0.5;
     if (gradePass) {
@@ -372,17 +480,46 @@ export function createScene({ canvas, getFrame } = {}) {
       target.yaw = frame.yaw;
       target.pitch = frame.pitch;
       target.visible = frame.visible;
+      target.explode = frame.explode || 0;
       if (frame.plate && frame.plate !== currentKey) loadPlate(frame.plate);
+      if (frame.plate && frame.plate !== machinePlate) loadMachine(frame.plate);
     }
 
     const ease = prefersReduced ? 1 : 1 - Math.pow(0.002, delta);
     state.yaw = lerp(state.yaw, target.yaw, ease);
     state.pitch = lerp(state.pitch, target.pitch, ease);
     state.visible = target.visible;
+    state.explode = lerp(state.explode, target.explode, ease);
 
     stage.visible = state.visible;
+
     if (state.visible) {
-      framePlate(lastRect, window.innerWidth, window.innerHeight);
+      // the photograph hands over to the exploded chassis
+      const fade = clamp((state.explode - 0.28) / 0.44, 0, 1);
+      const showPhoto = fade < 0.995;
+      const showModel = fade > 0.005;
+
+      plate.visible = showPhoto;
+      reflection.visible = showPhoto;
+      shadow.visible = showPhoto;
+      plateMaterial.opacity = 1 - fade;
+      reflectionMaterial.opacity = 0.55 * (1 - fade);
+      shadowMaterial.opacity = 0.85 * (1 - fade);
+
+      if (machine) {
+        machine.root.visible = showModel;
+        machine.setExplode(state.explode);
+        machine.update(delta, motion);
+        machine.root.rotation.y = state.yaw * 0.35 + 0.42;
+        machine.root.rotation.x = state.pitch * 0.4 + 0.06;
+        machine.root.updateMatrixWorld(true);
+        machineMaterials.forEach((material) => {
+          material.opacity = fade;
+        });
+      }
+
+      if (fade < 0.5) framePlate(lastRect, window.innerWidth, window.innerHeight);
+      else frameModel(lastRect, window.innerWidth, window.innerHeight);
     }
 
     if (composer) composer.render(delta);
@@ -408,13 +545,38 @@ export function createScene({ canvas, getFrame } = {}) {
       target.yaw = frame.yaw;
       target.pitch = frame.pitch;
       target.visible = frame.visible;
+      target.explode = frame.explode || 0;
       if (frame.plate && frame.plate !== currentKey) loadPlate(frame.plate);
+      if (frame.plate && frame.plate !== machinePlate) loadMachine(frame.plate);
     }
     state.yaw = target.yaw;
     state.pitch = target.pitch;
     state.visible = target.visible;
+    state.explode = target.explode;
     stage.visible = state.visible;
-    if (state.visible) framePlate(lastRect, window.innerWidth, window.innerHeight);
+    if (state.visible) {
+      const fade = clamp((state.explode - 0.28) / 0.44, 0, 1);
+      const showPhoto = fade < 0.995;
+      const showModel = fade > 0.005;
+      plate.visible = showPhoto;
+      reflection.visible = showPhoto;
+      shadow.visible = showPhoto;
+      plateMaterial.opacity = 1 - fade;
+      reflectionMaterial.opacity = 0.55 * (1 - fade);
+      shadowMaterial.opacity = 0.85 * (1 - fade);
+      if (machine) {
+        machine.root.visible = showModel;
+        machine.setExplode(state.explode);
+        machine.root.rotation.y = state.yaw * 0.35 + 0.42;
+        machine.root.rotation.x = state.pitch * 0.4 + 0.06;
+        machine.root.updateMatrixWorld(true);
+        machineMaterials.forEach((material) => {
+          material.opacity = fade;
+        });
+      }
+      if (fade < 0.5) framePlate(lastRect, window.innerWidth, window.innerHeight);
+      else frameModel(lastRect, window.innerWidth, window.innerHeight);
+    }
     if (composer) composer.render(0.016);
     else renderer.render(scene, camera);
   }

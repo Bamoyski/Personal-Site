@@ -744,6 +744,13 @@ html.has-webgl .vp-product { opacity: 0; }
   height: 1px;
   background: var(--line);
 }
+.section-note {
+  margin: -8px 0 18px;
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.02em;
+}
 
 /* ------------------------------- port maps ------------------------------- */
 .port-columns {
@@ -1016,9 +1023,21 @@ footer {
 
 /* ------------------------------- responsive ------------------------------ */
 @media (max-width: 1080px) {
-  .sheet-body { grid-template-columns: minmax(0, 1fr); }
-  .sheet-stage { position: static; }
-  .viewport { height: clamp(320px, 52vw, 460px); }
+  /* a flex column gives the sticky viewport room to travel as the sheet
+     scrolls past, so the chassis can still come apart on a narrow screen */
+  .sheet-body {
+    display: flex;
+    flex-direction: column;
+    gap: 26px;
+  }
+  .sheet-stage {
+    position: sticky;
+    top: 62px;
+    z-index: 5;
+    background: var(--bg);
+    padding-bottom: 10px;
+  }
+  .viewport { height: 320px; max-width: 420px; margin-inline: auto; }
   .about-grid { grid-template-columns: minmax(0, 1fr); gap: 32px; }
   .sheet-head { grid-template-columns: minmax(0, 1fr); }
   .contents-table .c-role, .contents-table .c-spec { display: none; }

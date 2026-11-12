@@ -203,6 +203,7 @@ function sheetMarkup(machine) {
 
           <section class="sheet-section" data-internals>
             <h3 class="section-title">Inside</h3>
+            <p class="section-note">The chassis comes apart in the viewport as this section reaches the top of the screen.</p>
             <ul class="internal-list">${internals}</ul>
           </section>
 
@@ -375,6 +376,7 @@ export function createFrameProvider() {
       return {
         viewport,
         sheet,
+        internals: sheet ? sheet.querySelector('[data-internals]') : null,
         plate: viewport.dataset.plate || '',
         cover: viewport.hasAttribute('data-cover'),
       };
@@ -404,7 +406,7 @@ export function createFrameProvider() {
       });
 
       if (!best || bestArea < 2000) {
-        return { visible: false, rect: null, yaw: 0, pitch: 0, plate: '' };
+        return { visible: false, rect: null, yaw: 0, pitch: 0, plate: '', explode: 0 };
       }
 
       const { entry, rect } = best;
@@ -423,6 +425,15 @@ export function createFrameProvider() {
         pitch = lerp(0.04, 0.17, progress);
       }
 
+      // the chassis comes apart while the Inside block is the thing on screen
+      let explode = 0;
+      if (entry.internals) {
+        const r = entry.internals.getBoundingClientRect();
+        const up = clamp((H * 0.92 - r.top) / (H * 0.45), 0, 1);
+        const down = clamp(r.bottom / (H * 0.5), 0, 1);
+        explode = Math.min(up, down);
+      }
+
       const visible = bestArea > rect.width * rect.height * 0.1;
 
       return {
@@ -430,6 +441,7 @@ export function createFrameProvider() {
         rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
         yaw,
         pitch,
+        explode,
         plate: entry.plate,
       };
     },

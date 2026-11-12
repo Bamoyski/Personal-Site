@@ -29,7 +29,7 @@ The site is static. No framework, no build step, no bundler.
 
 ## The 3D layer
 
-The hardware is not modelled. It is the real thing: manufacturer product
+The exterior is not modelled. It is the real thing: manufacturer product
 photography, cut out of its studio backdrop and stood on a real 3D floor.
 
 `tools/prep-images.py` floods the background out of the source shot and
@@ -48,6 +48,23 @@ The plate is drawn unlit and without tone mapping, so the pixels on screen
 are the pixels the manufacturer rendered. Over the top of it goes a
 photographic grade: lens falloff, a touch of lateral chromatic aberration
 and animated grain, plus a subtle bloom and SMAA.
+
+### The exploded view
+
+Scroll to the **Inside** block on any sheet and the photograph hands over to
+a chassis that comes apart. `chassis.js` builds each machine to the
+vendor dimensions —
+
+| | H × W × D |
+| --- | --- |
+| OptiPlex 3090 SFF | 290 × 92.6 × 292.8 mm |
+| OptiPlex 7050 Micro | 182 × 183 × 179 mm |
+| ThinkCentre M910q Tiny | 36.5 × 182.9 × 179 mm |
+
+— with the panels, PSU, board, memory, drives and cooling modelled and
+separated along the assembly axis. Base colours are sampled from the real
+photographs (`tools/sample-palette.py`) so the exploded model and the
+photography agree on tone.
 
 Without WebGL the page falls back to the same photograph in the DOM.
 

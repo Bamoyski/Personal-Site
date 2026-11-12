@@ -3,38 +3,41 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>404 — Ben Moyer</title>
-  <meta name="description" content="Page not found." />
+  <title>404 — Tech Binder</title>
+  <meta name="description" content="That page is not in the binder." />
   <meta name="robots" content="noindex" />
-  <meta name="theme-color" content="#070a0c" />
+  <meta name="theme-color" content="#08080A" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400..600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@300..600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --bg: #070a0c;
-      --panel: #0d1216;
-      --line: #1d262c;
-      --text: #eef3f4;
-      --muted: #93a2aa;
-      --faint: #74868f;
-      --accent: #7dd3dc;
-      --accent-ink: #062126;
+      --bg: #08080a;
+      --panel: #0d0d11;
+      --line: rgba(255, 255, 255, 0.09);
+      --line-2: rgba(255, 255, 255, 0.16);
+      --text: #e9eaec;
+      --muted: #8f939c;
+      --faint: #5d6169;
+      --indigo: #6366f1;
+      --font-display: "Space Grotesk", "Inter", ui-sans-serif, system-ui, sans-serif;
+      --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     }
     * { box-sizing: border-box; }
+    html, body { height: 100%; }
     body {
       margin: 0;
-      min-height: 100vh;
       display: grid;
       place-items: center;
       padding: 28px;
       background:
-        radial-gradient(760px 540px at 10% -10%, rgba(125, 211, 220, 0.12), transparent 62%),
-        radial-gradient(900px 620px at 92% -4%, rgba(232, 199, 155, 0.05), transparent 60%),
+        radial-gradient(900px 600px at 70% 10%, rgba(99, 102, 241, 0.16), transparent 62%),
         var(--bg);
       color: var(--text);
-      font-family: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
+      font-family: var(--font-sans);
+      -webkit-font-smoothing: antialiased;
     }
     body::before {
       content: "";
@@ -42,96 +45,114 @@
       inset: 0;
       pointer-events: none;
       background-image:
-        linear-gradient(rgba(147, 162, 170, 0.055) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(147, 162, 170, 0.055) 1px, transparent 1px);
-      background-size: 68px 68px;
-      -webkit-mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, #000 20%, transparent 80%);
-      mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, #000 20%, transparent 80%);
+        linear-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.028) 1px, transparent 1px);
+      background-size: 64px 64px;
+      -webkit-mask-image: radial-gradient(ellipse 110% 70% at 50% 0%, #000 10%, transparent 74%);
+      mask-image: radial-gradient(ellipse 110% 70% at 50% 0%, #000 10%, transparent 74%);
     }
     main {
       position: relative;
       width: 100%;
       max-width: 620px;
-      padding: clamp(30px, 6vw, 54px);
+      padding: clamp(28px, 5vw, 46px);
       border: 1px solid var(--line);
-      border-radius: 20px;
-      background: linear-gradient(180deg, var(--panel), rgba(10, 14, 17, 0.92));
-      box-shadow: 0 40px 100px -40px #000;
+      border-radius: 18px;
+      background: var(--panel);
+      box-shadow: 0 50px 110px -50px #000;
     }
-    .mono {
-      display: flex;
+    main::before,
+    main::after {
+      content: "";
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      border-style: solid;
+      border-color: var(--line-2);
+    }
+    main::before { top: -1px; left: -1px; border-width: 1px 0 0 1px; }
+    main::after { bottom: -1px; right: -1px; border-width: 0 1px 1px 0; }
+    .eyebrow {
+      display: inline-flex;
       align-items: center;
       gap: 10px;
-      font-family: "JetBrains Mono", monospace;
-      font-size: 0.65rem;
+      font-family: var(--font-mono);
+      font-size: 0.66rem;
       letter-spacing: 0.16em;
       text-transform: uppercase;
-      color: var(--accent);
+      color: var(--indigo);
     }
-    .mono::before { content: ""; width: 18px; height: 1px; background: currentColor; opacity: 0.65; }
+    .eyebrow::before {
+      content: "";
+      width: 18px;
+      height: 1px;
+      background: currentColor;
+      opacity: 0.7;
+    }
     h1 {
       margin: 20px 0 16px;
-      font-size: clamp(2.7rem, 8vw, 4.6rem);
-      line-height: 0.95;
-      letter-spacing: -0.05em;
-      font-weight: 600;
-    }
-    h1 em {
-      font-family: "Instrument Serif", Georgia, serif;
-      font-style: italic;
-      font-weight: 400;
-      color: var(--accent);
+      font-family: var(--font-display);
+      font-size: clamp(2.4rem, 7vw, 4rem);
+      font-weight: 700;
+      line-height: 0.98;
+      letter-spacing: -0.035em;
     }
     p {
       max-width: 30rem;
-      margin: 0 0 28px;
+      margin: 0 0 26px;
       color: var(--muted);
-      font-size: 0.98rem;
-      line-height: 1.65;
+      font-size: 0.96rem;
+      line-height: 1.68;
     }
     .actions { display: flex; flex-wrap: wrap; gap: 10px; }
     .btn {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      min-height: 44px;
-      padding: 10px 18px;
-      border: 1px solid var(--accent);
-      border-radius: 8px;
-      background: var(--accent);
-      color: var(--accent-ink);
-      font-size: 0.88rem;
-      font-weight: 650;
+      min-height: 40px;
+      padding: 9px 17px;
+      border: 1px solid var(--line-2);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
       text-decoration: none;
+      transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
     }
-    .btn.ghost { background: transparent; border-color: var(--line); color: var(--text); }
-    .btn:hover { filter: brightness(1.06); }
-    .btn.ghost:hover { border-color: var(--accent); color: var(--accent); }
-    :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
-    .footer {
+    .btn:hover { border-color: var(--indigo); color: var(--indigo); background: rgba(99, 102, 241, 0.1); }
+    .btn.accent { background: var(--indigo); border-color: var(--indigo); color: #fff; }
+    .btn.accent:hover { background: #7b7ef5; border-color: #7b7ef5; color: #fff; }
+    .foot {
       display: flex;
       justify-content: space-between;
       gap: 18px;
-      margin-top: 34px;
+      margin-top: 32px;
       padding-top: 16px;
       border-top: 1px solid var(--line);
-      font-family: "JetBrains Mono", monospace;
-      font-size: 0.58rem;
-      letter-spacing: 0.04em;
+      font-family: var(--font-mono);
+      font-size: 0.62rem;
+      letter-spacing: 0.08em;
       color: var(--faint);
     }
+    :focus-visible { outline: 2px solid var(--indigo); outline-offset: 3px; }
   </style>
 </head>
 <body>
   <main>
-    <span class="mono">404 / not found</span>
-    <h1>This page is <em>down.</em></h1>
-    <p>Or it never existed. Either way, that's the real error — which is more than most sites will tell you.</p>
+    <span class="eyebrow">404 / not in the binder</span>
+    <h1>This page is missing.</h1>
+    <p>
+      Either it never existed, or it moved when the hardware was rebuilt. Both are
+      real errors, and both are more useful than a blank screen.
+    </p>
     <div class="actions">
-      <a class="btn" href="/">Back home</a>
-      <a class="btn ghost" href="https://github.com/Bamoyski">GitHub</a>
+      <a class="btn accent" href="/">Back to the binder</a>
+      <a class="btn" href="https://github.com/Bamoyski">GitHub</a>
     </div>
-    <div class="footer">
+    <div class="foot">
       <span>benmoyer.org</span>
       <span>try / instead</span>
     </div>

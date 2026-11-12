@@ -1,8 +1,8 @@
 # benmoyer.org
 
 A tech binder for the three machines that run Ben Moyer's infrastructure:
-a Dell OptiPlex 3090 SFF, a Lenovo ThinkCentre M910q Tiny, and a Dell OptiPlex
-7050 Micro.
+a Dell OptiPlex 3090 SFF, a Lenovo ThinkCentre M910q Tiny and a Dell
+OptiPlex 7050 Micro.
 
 The site is static. No framework, no build step, no bundler.
 
@@ -16,11 +16,12 @@ The site is static. No framework, no build step, no bundler.
 | `assets/js/main.js` | Entry point; wires the 3D layer to the document |
 | `assets/js/machines.js` | The hardware data — specs, port maps, topology |
 | `assets/js/binder.js` | Renders the sheets from the data and drives the camera |
-| `assets/js/scene.js` | Three.js renderer, post-processing, camera framing |
-| `assets/js/chassis.js` | Parametric chassis builder (three presets) |
+| `assets/js/scene.js` | Three.js renderer, product stage, post-processing |
 | `assets/js/studio.js` | Studio environment, baked to an environment map |
-| `assets/js/textures.js` | Procedural PBR maps, generated on a canvas |
 | `assets/js/ui.js` | Theme, motion preference, icons, reveals, tab scrollspy |
+| `assets/img/machines/` | Product photography, reflections and contact shadows |
+| `tools/prep-images.py` | Cuts the studio backdrop off the product shots |
+| `tools/gen-plates.py` | Builds the reflection and contact shadow plates |
 | `og.png` | Social preview image |
 | `favicon.svg` / `avatar.png` | Site icons |
 | `robots.txt` / `sitemap.xml` | Search engine metadata |
@@ -28,32 +29,33 @@ The site is static. No framework, no build step, no bundler.
 
 ## The 3D layer
 
-There is no `.glb` anywhere. Each chassis is built from primitives in
-`chassis.js`, with perforations, vent grilles, heatsink fins, port clusters,
-cabling and fasteners generated as instanced geometry.
+The hardware is not modelled. It is the real thing: manufacturer product
+photography, cut out of its studio backdrop and stood on a real 3D floor.
 
-Materials are `MeshPhysicalMaterial` with procedurally generated normal and
-roughness maps (`textures.js`). Lighting comes from a miniature photo studio
-built in `studio.js` and baked into an environment map with `PMREMGenerator`,
-plus a three-point rig for the direct light and shadows.
+`tools/prep-images.py` floods the background out of the source shot and
+trims it to the product. `tools/gen-plates.py` then builds two derived
+plates per machine — a flipped, blurred, fading reflection and a soft
+contact shadow.
 
-The camera is framed analytically: the target rectangle is the on-screen
-"viewport" panel of the machine sheet you are reading, and the distance is
-solved so the chassis fits that rectangle at any viewport size. Scroll down to
-the **Inside** block on any sheet and the chassis comes apart.
+`scene.js` puts that in a Three.js studio: a glossy floor lit by an
+environment map baked from `studio.js`, the product plate standing on it,
+and the reflection and shadow laid into the same space. The camera is
+solved analytically against the on-screen viewport panel, so the product is
+framed correctly at any window size, and the whole thing orbits with the
+scroll.
 
-Rendering goes through an `EffectComposer` on capable hardware:
+The plate is drawn unlit and without tone mapping, so the pixels on screen
+are the pixels the manufacturer rendered. Over the top of it goes a
+photographic grade: lens falloff, a touch of lateral chromatic aberration
+and animated grain, plus a subtle bloom and SMAA.
 
-```
-RenderPass -> GTAO -> UnrealBloom -> OutputPass (ACES + sRGB) -> SMAA
-```
+Without WebGL the page falls back to the same photograph in the DOM.
 
-Quality tiers are picked from device memory, core count and viewport width, and
-can be forced with `?tier=low|medium|high`. The low tier renders straight to
-the canvas with no post-processing and no shadows.
+## Specification sources
 
-Without WebGL the page still reads as a binder — the canvas is replaced with a
-static placeholder.
+The OptiPlex 3090 SFF rows follow Dell's own *OptiPlex 3090 Small Form
+Factor Setup and Specifications* manual. Where a figure depends on how a
+machine was ordered, the notes column says so rather than picking one.
 
 ## Local preview
 

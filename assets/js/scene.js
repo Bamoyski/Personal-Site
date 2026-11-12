@@ -1,75 +1,101 @@
 /**
- * Three.js layer for the tech binder.
+ * Product stage.
  *
- * One canvas, fixed behind the document. The active machine's chassis is
- * framed inside whichever "viewport" panel the reader is looking at, so the
- * model appears to live inside the drawing rather than floating on top of it.
+ * The hardware itself is the real thing: a manufacturer product photograph,
+ * cut out and placed in a Three.js studio. The scene provides the depth —
+ * a glossy floor, a soft reflection, a contact shadow, a camera that orbits
+ * with the scroll, and a photographic grade over the top.
  *
- * Rendering goes through an EffectComposer on capable hardware:
- *   RenderPass -> GTAO (contact shading) -> Bloom (LEDs, speculars)
- *   -> OutputPass (ACES + sRGB) -> SMAA
- * Lower tiers drop the expensive passes and render straight to the canvas.
+ * The plate is drawn unlit and without tone mapping, so the pixels you see
+ * are the pixels the manufacturer rendered.
  */
 
 import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 
-import { buildChassis } from './chassis.js';
-import { bakeEnvironment, buildLightRig } from './studio.js';
+import { bakeEnvironment } from './studio.js';
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 const lerp = (a, b, t) => a + (b - a) * t;
 
-const CAMERA_DIR = new THREE.Vector3(0.78, 0.5, 1.0).normalize();
+/* Photographic grade: lens falloff, a touch of lateral chromatic aberration
+   and animated grain, applied over the finished frame. */
+const GradeShader = {
+  uniforms: {
+    tDiffuse: { value: null },
+    uTime: { value: 0 },
+    uVignette: { value: 0.42 },
+    uGrain: { value: 0.026 },
+    uAberration: { value: 0.7 },
+    uLift: { value: 0.004 },
+  },
+  vertexShader: /* glsl */ `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+    }
+  `,
+  fragmentShader: /* glsl */ `
+    uniform sampler2D tDiffuse;
+    uniform float uTime;
+    uniform float uVignette;
+    uniform float uGrain;
+    uniform float uAberration;
+    uniform float uLift;
+    varying vec2 vUv;
 
-/* ------------------------------------------------------------------ *
- * Quality tiers
- * ------------------------------------------------------------------ */
-function pickTier() {
-  const forced = new URLSearchParams(window.location.search).get('tier');
-  if (forced === 'low' || forced === 'medium' || forced === 'high') {
-    const tiers = {
-      low: { name: 'low', pixelRatio: 1.25, shadows: false, gtao: false, bloom: false, smaa: false, detailed: false },
-      medium: { name: 'medium', pixelRatio: 1.5, shadows: true, gtao: false, bloom: true, smaa: true, detailed: true },
-      high: { name: 'high', pixelRatio: 1.35, shadows: true, gtao: true, bloom: true, smaa: true, detailed: true },
-    };
-    return tiers[forced];
-  }
+    float hash( vec2 p ) {
+      return fract( sin( dot( p, vec2( 12.9898, 78.233 ) ) ) * 43758.5453 );
+    }
 
-  const mobile = window.matchMedia('(max-width: 820px)').matches;
-  const cores = navigator.hardwareConcurrency || 4;
-  const memory = navigator.deviceMemory || 8;
-  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    void main() {
+      vec2 uv = vUv;
+      vec2 d = uv - 0.5;
+      float r2 = dot( d, d );
 
-  if (mobile || cores <= 4 || memory <= 4) {
-    return { name: 'low', pixelRatio: 1.25, shadows: false, gtao: false, bloom: false, smaa: false, detailed: false };
-  }
-  if (cores <= 8 && memory <= 8) {
-    return { name: 'medium', pixelRatio: 1.6, shadows: true, gtao: false, bloom: true, smaa: true, detailed: true };
-  }
-  return { name: 'high', pixelRatio: 2, shadows: true, gtao: true, bloom: true, smaa: true, detailed: !reduced };
-}
+      vec2 shift = d * r2 * uAberration * 0.01;
+      vec4 col;
+      col.r = texture2D( tDiffuse, uv + shift ).r;
+      col.g = texture2D( tDiffuse, uv ).g;
+      col.b = texture2D( tDiffuse, uv - shift ).b;
+      col.a = 1.0;
 
-const THEME = {
-  dark: { fog: 0x08080a, shadow: 0.72, exposure: 1.16, env: 0.78, bloom: 0.16, bloomThreshold: 1.0 },
-  light: { fog: 0xedebe6, shadow: 0.3, exposure: 1.0, env: 0.9, bloom: 0.1, bloomThreshold: 1.05 },
+      col.rgb *= 1.0 - uVignette * r2 * 1.15;
+
+      col.rgb += uLift * ( 1.0 - col.rgb );
+
+      float n = hash( uv * vec2( 1024.0, 768.0 ) + fract( uTime ) * 91.7 ) - 0.5;
+      float luma = dot( col.rgb, vec3( 0.2126, 0.7152, 0.0722 ) );
+      col.rgb += n * uGrain * ( 1.2 - luma );
+
+      gl_FragColor = col;
+    }
+  `,
 };
+
+const PLATES = {
+  'optiplex-3090-sff': 'assets/img/machines/optiplex-3090-sff.png',
+  'optiplex-7050-micro': 'assets/img/machines/optiplex-7050-micro.png',
+  'thinkcentre-m910q': 'assets/img/machines/thinkcentre-m910q.png',
+};
+
+const PLATE_HEIGHT = 3.1;
 
 export function createScene({ canvas, getFrame } = {}) {
   const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  let tier = pickTier();
-  let theme = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+  let isSmall = window.matchMedia('(max-width: 820px)').matches;
 
   let renderer;
   try {
     renderer = new THREE.WebGLRenderer({
       canvas,
-      antialias: tier.name === 'low',
+      antialias: !isSmall,
       alpha: true,
       powerPreference: 'high-performance',
       stencil: false,
@@ -79,292 +105,260 @@ export function createScene({ canvas, getFrame } = {}) {
   }
   if (!renderer.getContext()) return null;
 
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, tier.pixelRatio));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isSmall ? 1.5 : 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = THEME[theme].exposure;
-  renderer.shadowMap.enabled = tier.shadows;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  // the plate is a finished photograph, so it must not be tone mapped again
+  renderer.toneMapping = THREE.NoToneMapping;
+  renderer.shadowMap.enabled = false;
   renderer.setClearColor(0x000000, 0);
 
   const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 100);
 
-  const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 200);
+  /* ------------------------------- the stage ------------------------------ */
+  const stage = new THREE.Group();
+  scene.add(stage);
 
-  /* --------------------------- studio environment ------------------------- */
-  let envRT = bakeEnvironment(renderer, { theme });
-  scene.environment = envRT.texture;
-  scene.environmentIntensity = THEME[theme].env;
-
-  const rig = buildLightRig(scene, {
-    shadows: tier.shadows,
-    shadowSize: tier.name === 'high' ? 2048 : 1024,
-    theme,
-  });
-
-  /* ------------------------------- ground shadow -------------------------- */
-  /* A soft painted contact shadow reads far better than a hard cast one,
-     and costs nothing. The real shadow map still does the self-shadowing. */
-  const blobCanvas = document.createElement('canvas');
-  blobCanvas.width = blobCanvas.height = 128;
-  const blobCtx = blobCanvas.getContext('2d');
-  const blobGradient = blobCtx.createRadialGradient(64, 64, 2, 64, 64, 62);
-  blobGradient.addColorStop(0, 'rgba(0,0,0,0.85)');
-  blobGradient.addColorStop(0.45, 'rgba(0,0,0,0.42)');
-  blobGradient.addColorStop(1, 'rgba(0,0,0,0)');
-  blobCtx.fillStyle = blobGradient;
-  blobCtx.fillRect(0, 0, 128, 128);
-  const blobTexture = new THREE.CanvasTexture(blobCanvas);
-
-  const shadow = new THREE.Mesh(
-    new THREE.PlaneGeometry(10, 10),
-    new THREE.MeshBasicMaterial({
-      map: blobTexture,
+  // glossy floor that catches the environment
+  const floorTexture = makeFloorTexture();
+  const floor = new THREE.Mesh(
+    new THREE.PlaneGeometry(26, 26),
+    new THREE.MeshPhysicalMaterial({
+      color: 0x07080a,
+      roughness: 0.34,
+      metalness: 0.4,
       transparent: true,
-      opacity: 0.7,
+      alphaMap: floorTexture,
       depthWrite: false,
-      color: 0x000000,
+      envMapIntensity: 0.3,
     })
   );
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.y = -0.002;
+  stage.add(floor);
+
+  // the product plate
+  const plateMaterial = new THREE.MeshBasicMaterial({
+    transparent: true,
+    depthWrite: false,
+    toneMapped: false,
+  });
+  const plate = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), plateMaterial);
+  stage.add(plate);
+
+  // its reflection in the floor
+  const reflectionMaterial = new THREE.MeshBasicMaterial({
+    transparent: true,
+    depthWrite: false,
+    toneMapped: false,
+    opacity: 0.55,
+  });
+  const reflection = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), reflectionMaterial);
+  reflection.rotation.x = Math.PI / 2;
+  stage.add(reflection);
+
+  // contact shadow
+  const shadowMaterial = new THREE.MeshBasicMaterial({
+    transparent: true,
+    depthWrite: false,
+    toneMapped: false,
+    opacity: 0.85,
+  });
+  const shadow = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), shadowMaterial);
   shadow.rotation.x = -Math.PI / 2;
-  shadow.position.y = -3.4;
-  scene.add(shadow);
+  shadow.position.y = 0.004;
+  stage.add(shadow);
 
-  /* --------------------------------- chassis ------------------------------ */
-  let machine = null;
-  let currentPreset = null;
-  let motion = prefersReduced ? 0 : 1;
+  /* ------------------------------- lighting ------------------------------ */
+  const envRT = bakeEnvironment(renderer, { theme: 'dark' });
+  scene.environment = envRT.texture;
+  scene.environmentIntensity = 0.55;
 
-  const state = {
-    yaw: 0,
-    explode: 0,
-    visible: false,
-    distance: 40,
-  };
-  const target = { yaw: 0, explode: 0, visible: false };
+  const key = new THREE.DirectionalLight(0xffffff, 1.6);
+  key.position.set(4, 8, 6);
+  scene.add(key);
 
-  function setMachine(preset) {
-    if (preset === currentPreset) return;
-    if (machine) {
-      scene.remove(machine.root);
-      machine.dispose();
-      machine = null;
-    }
-    currentPreset = preset;
-    if (!preset) return;
-    machine = buildChassis(preset, { detailed: tier.detailed });
-    scene.add(machine.root);
-    // keep the contact shadow just under the model
-    const extents = machine.halfExtents();
-    shadow.position.y = -(extents.y + 0.55);
+  const rim = new THREE.DirectionalLight(0xb8bcd4, 0.9);
+  rim.position.set(-5, 3, -6);
+  scene.add(rim);
+
+  /* ------------------------------- textures ------------------------------ */
+  const loader = new THREE.TextureLoader();
+  const textures = {};
+  let currentKey = null;
+  let loading = false;
+
+  function loadPlate(key) {
+    if (key === currentKey || loading) return;
+    const base = PLATES[key];
+    if (!base) return;
+    loading = true;
+    const dir = base.replace(/[^/]+$/, '');
+    const file = base.replace(/.*\//, '');
+
+    loader.load(
+      base,
+      (map) => {
+        map.colorSpace = THREE.SRGBColorSpace;
+        map.anisotropy = renderer.capabilities.getMaxAnisotropy();
+        map.needsUpdate = true;
+        const aspect = map.image.width / map.image.height;
+        plateMaterial.map = map;
+        plateMaterial.needsUpdate = true;
+        plate.scale.set(PLATE_HEIGHT * aspect, PLATE_HEIGHT, 1);
+        plate.position.y = PLATE_HEIGHT / 2;
+
+        loader.load(dir + 'ref-' + file, (ref) => {
+          ref.colorSpace = THREE.SRGBColorSpace;
+          reflectionMaterial.map = ref;
+          reflectionMaterial.needsUpdate = true;
+          reflection.scale.set(PLATE_HEIGHT * aspect, PLATE_HEIGHT, 1);
+          reflection.position.set(0, -PLATE_HEIGHT / 2, 0.001);
+
+          loader.load(dir + 'shadow-' + file, (sh) => {
+            sh.colorSpace = THREE.SRGBColorSpace;
+            shadowMaterial.map = sh;
+            shadowMaterial.needsUpdate = true;
+            shadow.scale.set(PLATE_HEIGHT * aspect * 0.92, PLATE_HEIGHT * 0.16, 1);
+            shadow.position.set(0, 0.004, 0.02);
+
+            textures[key] = { aspect };
+            currentKey = key;
+            loading = false;
+          });
+        });
+      },
+      undefined,
+      () => {
+        loading = false;
+      }
+    );
   }
 
-  /* -------------------------------- framing ------------------------------- */
-  const corners = Array.from({ length: 8 }, () => new THREE.Vector3());
-  const modelCentre = new THREE.Vector3();
+  /* ------------------------------- camera -------------------------------- */
   const camPos = new THREE.Vector3();
   const camTarget = new THREE.Vector3();
   const right = new THREE.Vector3();
   const up = new THREE.Vector3();
   const tmp = new THREE.Vector3();
-  const ndcBox = new THREE.Box2();
 
-  function updateCorners() {
-    const { centre, x, y, z } = machine.halfExtents();
-    modelCentre.copy(centre).applyMatrix4(machine.root.matrixWorld);
-    let i = 0;
-    for (const sx of [-1, 1]) {
-      for (const sy of [-1, 1]) {
-        for (const sz of [-1, 1]) {
-          corners[i].set(sx * x, sy * y, sz * z).applyMatrix4(machine.root.matrixWorld);
-          i += 1;
-        }
-      }
-    }
-  }
-
-  function projectCorners() {
-    ndcBox.makeEmpty();
-    for (let i = 0; i < 8; i += 1) {
-      tmp.copy(corners[i]).project(camera);
-      ndcBox.expandByPoint(tmp);
-    }
-    return ndcBox;
-  }
+  const state = { yaw: 0, pitch: 0, distance: 20, visible: false };
+  const target = { yaw: 0, pitch: 0, distance: 20, visible: false };
 
   /**
-   * Fits the model inside the target rectangle and centres it there.
-   * Distance is solved iteratively because the projected size is perspective
-   * dependent, then the camera is slid sideways to land the model on target.
+   * Frames the plate inside the on-screen viewport panel: the distance is
+   * solved so the plate fills the panel, then the camera is slid sideways so
+   * the plate lands exactly in the middle of it.
    */
-  function frameModel(rect, W, H) {
-    if (!machine) return;
-    updateCorners();
+  function framePlate(rect, W, H) {
+    const tanV = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
 
-    const targetW = (rect.width / W) * 2;
-    const targetH = (rect.height / H) * 2;
-    const padding = 0.9;
+    // projected height of the plate as a fraction of the viewport
+    const fill = 0.82;
+    const wantNdc = 2 * (rect.height / H) * fill;
+    const distance = clamp(PLATE_HEIGHT / (wantNdc * tanV), 6, 60);
 
-    let distance = 34;
-    for (let pass = 0; pass < 4; pass += 1) {
-      camPos.copy(CAMERA_DIR).multiplyScalar(distance).add(modelCentre);
-      camera.position.copy(camPos);
-      camera.lookAt(modelCentre);
-      camera.updateMatrixWorld();
+    const yaw = state.yaw;
+    const pitch = state.pitch;
+    const dir = new THREE.Vector3(
+      Math.sin(yaw) * Math.cos(pitch),
+      Math.sin(pitch),
+      Math.cos(yaw) * Math.cos(pitch)
+    );
 
-      const box = projectCorners();
-      const ndcW = Math.max(box.max.x - box.min.x, 0.0001);
-      const ndcH = Math.max(box.max.y - box.min.y, 0.0001);
-      const scale = Math.min((targetW * padding) / ndcW, (targetH * padding) / ndcH);
-      distance = clamp(distance / scale, 6, 400);
-    }
-
-    // final placement
-    camPos.copy(CAMERA_DIR).multiplyScalar(distance).add(modelCentre);
+    camPos.copy(dir).multiplyScalar(distance).add(tmp.set(0, PLATE_HEIGHT / 2, 0));
     camera.position.copy(camPos);
-    camera.lookAt(modelCentre);
+    camera.lookAt(tmp.set(0, PLATE_HEIGHT / 2, 0));
     camera.updateMatrixWorld();
-    const box = projectCorners();
 
-    const ndcCentreX = (box.min.x + box.max.x) / 2;
-    const ndcCentreY = (box.min.y + box.max.y) / 2;
+    // where is the plate centre on screen?
+    const centre = new THREE.Vector3(0, PLATE_HEIGHT / 2, 0).project(camera);
     const wantX = ((rect.left + rect.width / 2) / W) * 2 - 1;
     const wantY = 1 - ((rect.top + rect.height / 2) / H) * 2;
 
-    const tanV = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
     right.set(1, 0, 0).applyQuaternion(camera.quaternion);
     up.set(0, 1, 0).applyQuaternion(camera.quaternion);
 
-    // aiming off-centre pushes the model the opposite way on screen
-    const shiftX = -(wantX - ndcCentreX) * distance * tanV * camera.aspect;
-    const shiftY = -(wantY - ndcCentreY) * distance * tanV;
+    const shiftX = -(wantX - centre.x) * distance * tanV * camera.aspect;
+    const shiftY = -(wantY - centre.y) * distance * tanV;
 
-    camTarget.copy(modelCentre).addScaledVector(right, shiftX).addScaledVector(up, shiftY);
+    camTarget.copy(tmp.set(0, PLATE_HEIGHT / 2, 0)).addScaledVector(right, shiftX).addScaledVector(up, shiftY);
     camera.position.copy(camPos).addScaledVector(right, shiftX).addScaledVector(up, shiftY);
     camera.lookAt(camTarget);
     camera.updateMatrixWorld();
-
-    state.distance = distance;
   }
 
-  /* ---------------------------- post processing --------------------------- */
+  /* ---------------------------- post processing -------------------------- */
   let composer = null;
   let bloomPass = null;
-  let gtaoPass = null;
+  let gradePass = null;
 
   function buildComposer() {
     if (composer) {
       composer.dispose();
       composer = null;
     }
-    if (tier.name === 'low') return;
-
+    if (isSmall) return;
     const size = new THREE.Vector2();
     renderer.getDrawingBufferSize(size);
-
-    const target = new THREE.WebGLRenderTarget(size.x, size.y, {
-      type: THREE.HalfFloatType,
-      samples: 0,
-    });
+    const target = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType });
     composer = new EffectComposer(renderer, target);
     composer.addPass(new RenderPass(scene, camera));
-
-    if (tier.gtao) {
-      gtaoPass = new GTAOPass(scene, camera, size.x, size.y);
-      gtaoPass.output = GTAOPass.OUTPUT.Default;
-      gtaoPass.blendIntensity = 0.85;
-      gtaoPass.updateGtaoMaterial({
-        radius: 0.35,
-        distanceExponent: 1.4,
-        thickness: 1.0,
-        scale: 1.0,
-        samples: 8,
-        distanceFallOff: 1.0,
-        screenSpaceRadius: false,
-      });
-      gtaoPass.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 4, rings: 2, samples: 8 });
-      composer.addPass(gtaoPass);
-    } else {
-      gtaoPass = null;
-    }
-
-    if (tier.bloom) {
-      bloomPass = new UnrealBloomPass(new THREE.Vector2(size.x, size.y), THEME[theme].bloom, 0.7, THEME[theme].bloomThreshold);
-      composer.addPass(bloomPass);
-    } else {
-      bloomPass = null;
-    }
-
+    bloomPass = new UnrealBloomPass(new THREE.Vector2(size.x, size.y), 0.12, 0.75, 0.9);
+    composer.addPass(bloomPass);
     composer.addPass(new OutputPass());
-
-    if (tier.smaa) {
-      composer.addPass(new SMAAPass(size.x, size.y));
-    }
+    composer.addPass(new SMAAPass(size.x, size.y));
+    gradePass = new ShaderPass(GradeShader);
+    composer.addPass(gradePass);
   }
-
   buildComposer();
 
-  /* --------------------------------- theme -------------------------------- */
-  function setTheme(next) {
-    theme = next;
-    const preset = THEME[next] || THEME.dark;
-    renderer.toneMappingExposure = preset.exposure;
-    scene.environmentIntensity = preset.env;
-    shadow.material.opacity = preset.shadow;
-    if (bloomPass) {
-      bloomPass.strength = preset.bloom;
-      bloomPass.threshold = preset.bloomThreshold;
+  /* -------------------------------- theme -------------------------------- */
+  function setTheme(theme) {
+    const dark = theme !== 'light';
+    floor.material.color.setHex(dark ? 0x07080a : 0xd8d5ce);
+    floor.material.envMapIntensity = dark ? 0.2 : 0.45;
+    scene.environmentIntensity = dark ? 0.35 : 0.6;
+    key.intensity = dark ? 1.6 : 2.1;
+    rim.intensity = dark ? 0.9 : 0.6;
+    reflectionMaterial.opacity = dark ? 0.55 : 0.4;
+    shadowMaterial.opacity = dark ? 0.85 : 0.5;
+    if (gradePass) {
+      gradePass.uniforms.uVignette.value = dark ? 0.42 : 0.3;
+      gradePass.uniforms.uGrain.value = dark ? 0.026 : 0.016;
     }
-    // re-bake the studio so the reflections follow the theme
-    const previous = envRT;
-    envRT = bakeEnvironment(renderer, { theme: next });
-    scene.environment = envRT.texture;
-    previous.dispose();
-    rig.ambient.intensity = next === 'dark' ? 0.35 : 0.7;
   }
 
   function setMotion(value) {
-    motion = value ? 0 : 1;
+    state.motion = value ? 0 : 1;
   }
 
-  /* --------------------------------- resize ------------------------------- */
+  /* -------------------------------- resize ------------------------------- */
   function resize() {
     const width = window.innerWidth;
     const height = window.innerHeight;
-    const nextTier = pickTier();
-    if (nextTier.name !== tier.name) {
-      tier = nextTier;
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, tier.pixelRatio));
-      renderer.shadowMap.enabled = tier.shadows;
-      rig.key.castShadow = tier.shadows;
-      if (machine) {
-        scene.remove(machine.root);
-        machine.dispose();
-        machine = null;
-        currentPreset = null;
-      }
-      buildComposer();
-    }
+    const wasSmall = isSmall;
+    isSmall = width <= 820;
+    if (wasSmall !== isSmall) buildComposer();
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, tier.pixelRatio));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isSmall ? 1.5 : 2));
     renderer.setSize(width, height, false);
     if (composer) {
       composer.setSize(width, height);
       const size = new THREE.Vector2();
       renderer.getDrawingBufferSize(size);
-      if (gtaoPass) gtaoPass.setSize(size.x, size.y);
       if (bloomPass) bloomPass.setSize(size.x, size.y);
     }
   }
   resize();
   window.addEventListener('resize', resize, { passive: true });
 
-  /* --------------------------------- loop --------------------------------- */
+  /* --------------------------------- loop -------------------------------- */
   let running = false;
   let lastTime = performance.now();
   let elapsed = 0;
-  let lastRect = null;
+  let lastRect = { left: 0, top: 0, width: 10, height: 10 };
 
   function loop(now) {
     if (!running) return;
@@ -374,39 +368,27 @@ export function createScene({ canvas, getFrame } = {}) {
 
     const frame = getFrame?.();
     if (frame) {
+      if (frame.rect) lastRect = frame.rect;
       target.yaw = frame.yaw;
-      target.explode = frame.explode;
+      target.pitch = frame.pitch;
       target.visible = frame.visible;
-      if (frame.preset && frame.preset !== currentPreset) setMachine(frame.preset);
-      lastRect = frame.rect;
+      if (frame.plate && frame.plate !== currentKey) loadPlate(frame.plate);
     }
 
     const ease = prefersReduced ? 1 : 1 - Math.pow(0.002, delta);
     state.yaw = lerp(state.yaw, target.yaw, ease);
-    state.explode = lerp(state.explode, target.explode, ease);
+    state.pitch = lerp(state.pitch, target.pitch, ease);
     state.visible = target.visible;
 
-    if (machine) {
-      machine.root.visible = state.visible;
-      machine.setExplode(state.explode);
-      machine.update(delta, motion);
-
-      const idle = motion;
-      machine.root.rotation.y = state.yaw + Math.sin(elapsed * 0.22) * 0.035 * idle;
-      machine.root.rotation.x = Math.sin(elapsed * 0.31) * 0.012 * idle;
-      machine.root.position.y = Math.sin(elapsed * 0.47) * 0.12 * idle;
-      machine.root.updateMatrixWorld(true);
-
-      if (state.visible && lastRect) {
-        frameModel(lastRect, window.innerWidth, window.innerHeight);
-      } else {
-        camera.position.copy(CAMERA_DIR).multiplyScalar(40).add(modelCentre);
-        camera.lookAt(modelCentre);
-      }
+    stage.visible = state.visible;
+    if (state.visible) {
+      framePlate(lastRect, window.innerWidth, window.innerHeight);
     }
 
     if (composer) composer.render(delta);
     else renderer.render(scene, camera);
+
+    if (gradePass) gradePass.uniforms.uTime.value = elapsed;
 
     requestAnimationFrame(loop);
   }
@@ -416,6 +398,25 @@ export function createScene({ canvas, getFrame } = {}) {
     running = true;
     lastTime = performance.now();
     requestAnimationFrame(loop);
+  }
+
+  /** Draw a single frame immediately, without waiting for the loop. */
+  function renderOnce() {
+    const frame = getFrame?.();
+    if (frame) {
+      if (frame.rect) lastRect = frame.rect;
+      target.yaw = frame.yaw;
+      target.pitch = frame.pitch;
+      target.visible = frame.visible;
+      if (frame.plate && frame.plate !== currentKey) loadPlate(frame.plate);
+    }
+    state.yaw = target.yaw;
+    state.pitch = target.pitch;
+    state.visible = target.visible;
+    stage.visible = state.visible;
+    if (state.visible) framePlate(lastRect, window.innerWidth, window.innerHeight);
+    if (composer) composer.render(0.016);
+    else renderer.render(scene, camera);
   }
 
   function stop() {
@@ -432,19 +433,34 @@ export function createScene({ canvas, getFrame } = {}) {
   return {
     setTheme,
     setMotion,
-    setMachine,
     start,
     stop,
-    tier,
+    renderOnce,
     scene,
     camera,
     renderer,
     dispose() {
       stop();
-      if (machine) machine.dispose();
       if (composer) composer.dispose();
-      renderer.dispose();
       envRT.dispose();
+      renderer.dispose();
     },
   };
+}
+
+/* A radial falloff so the floor fades out instead of ending in a hard edge. */
+function makeFloorTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 256;
+  const ctx = canvas.getContext('2d');
+  const gradient = ctx.createRadialGradient(128, 128, 6, 128, 128, 124);
+  gradient.addColorStop(0, '#ffffff');
+  gradient.addColorStop(0.22, '#6e6e6e');
+  gradient.addColorStop(0.55, '#1c1c1c');
+  gradient.addColorStop(1, '#000000');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, 256, 256);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.needsUpdate = true;
+  return texture;
 }

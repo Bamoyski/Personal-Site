@@ -30,6 +30,10 @@ const PORT_SHAPES = {
     `<circle cx="${x + w / 2}" cy="${y + h / 2}" r="${Math.min(w, h) / 2}"/><circle cx="${x + w / 2}" cy="${y + h / 2}" r="${Math.min(w, h) / 5}" class="fill"/>`,
   power: (x, y, w, h) =>
     `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2"/><path d="M${x + w / 2} ${y + h * 0.26} v${h * 0.26} M${x + w * 0.34} ${y + h * 0.36} a${w * 0.16} ${w * 0.16} 0 1 0 ${w * 0.32} 0"/>`,
+  led: (x, y, w, h) =>
+    `<circle cx="${x + w / 2}" cy="${y + h / 2}" r="${Math.min(w, h) / 2.6}"/><path d="M${x + w * 0.3} ${y + h * 0.7} h${w * 0.4}"/>`,
+  optical: (x, y, w, h) =>
+    `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="1.5"/><path d="M${x + w * 0.15} ${y + h * 0.62} h${w * 0.7}"/>`,
 };
 
 function portDiagram(machineId, side) {
@@ -171,10 +175,11 @@ function sheetMarkup(machine) {
 
       <div class="sheet-body">
         <div class="sheet-stage">
-          <div class="viewport" data-viewport>
+          <div class="viewport" data-viewport data-plate="${machine.id}">
+            <img class="vp-product" src="${machine.image}" alt="${machine.maker} ${machine.model}" loading="lazy" decoding="async" width="900" height="1200">
             <span class="vp-tag vp-tag--tl">VIEW · ${machine.index}</span>
             <span class="vp-tag vp-tag--tr">${machine.code}</span>
-            <span class="vp-tag vp-tag--bl">LIVE RENDER</span>
+            <span class="vp-tag vp-tag--bl">${machine.imageCredit}</span>
             <span class="vp-tag vp-tag--br">SCROLL TO ROTATE</span>
             <span class="vp-axis vp-axis--h" aria-hidden="true"></span>
           </div>
@@ -279,8 +284,7 @@ function topologyMarkup() {
     })
     .join('');
 
-  const links = topology.links
-    .map((link) => {
+  const links = topology.links    .map((link) => {
       const from = machines.findIndex((m) => m.id === link.from);
       const to = machines.findIndex((m) => m.id === link.to);
       const x1 = 120 + from * 330;
@@ -371,8 +375,7 @@ export function createFrameProvider() {
       return {
         viewport,
         sheet,
-        internals: sheet ? sheet.querySelector('[data-internals]') : null,
-        preset: sheet ? sheet.dataset.preset : 'sff',
+        plate: viewport.dataset.plate || '',
         cover: viewport.hasAttribute('data-cover'),
       };
     });
@@ -401,29 +404,23 @@ export function createFrameProvider() {
       });
 
       if (!best || bestArea < 2000) {
-        return { visible: false, rect: null, yaw: 0, explode: 0 };
+        return { visible: false, rect: null, yaw: 0, pitch: 0, plate: '' };
       }
 
       const { entry, rect } = best;
 
       let yaw;
+      let pitch;
       if (entry.cover) {
         // the cover turns slowly on its own
-        yaw = (performance.now() / 1000) * 0.16 - 0.5;
+        yaw = (performance.now() / 1000) * 0.13 - 0.5;
+        pitch = 0.13;
       } else {
         // turntable driven by how far the sheet has scrolled
         const sheetRect = entry.sheet.getBoundingClientRect();
         const progress = clamp((H - sheetRect.top) / (sheetRect.height + H), 0, 1);
-        yaw = lerp(-0.55, 0.8, progress);
-      }
-
-      // explode when the internals block is the thing on screen
-      let explode = 0;
-      if (entry.internals) {
-        const r = entry.internals.getBoundingClientRect();
-        const up = clamp((H * 0.9 - r.top) / (H * 0.42), 0, 1);
-        const down = clamp(r.bottom / (H * 0.42), 0, 1);
-        explode = Math.min(up, down);
+        yaw = lerp(-0.42, 0.46, progress);
+        pitch = lerp(0.04, 0.17, progress);
       }
 
       const visible = bestArea > rect.width * rect.height * 0.1;
@@ -432,8 +429,8 @@ export function createFrameProvider() {
         visible,
         rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
         yaw,
-        explode,
-        preset: entry.preset,
+        pitch,
+        plate: entry.plate,
       };
     },
   };

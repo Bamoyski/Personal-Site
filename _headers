@@ -3,3 +3,11 @@
   X-Frame-Options: DENY
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+
+/*
+  Always revalidate. A deploy that leaves the old CSS and JS in a browser
+  for four hours is a deploy that looks broken.
+  Cache-Control: public, max-age=0, must-revalidate
+
+/assets/*
+  Cache-Control: public, max-age=0, must-revalidate

@@ -618,6 +618,38 @@ html.has-webgl .vp-product { opacity: 0; }
   background: repeating-linear-gradient(90deg, var(--line) 0 1px, transparent 1px 10px);
 }
 
+/* the jump to the exploded view */
+.vp-open {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 13px;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--panel) 76%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: var(--shadow-md);
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease, transform 0.2s ease, background-color 0.2s ease;
+}
+.vp-open svg { width: 13px; height: 13px; }
+.vp-open:hover {
+  color: var(--text);
+  border-color: var(--indigo);
+  background: color-mix(in srgb, var(--indigo) 18%, var(--panel));
+  transform: translateY(-1px);
+}
+
 .stage-meta { display: flex; flex-direction: column; gap: 16px; }
 .sheet-summary {
   margin: 0;

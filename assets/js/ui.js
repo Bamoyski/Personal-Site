@@ -130,6 +130,19 @@ export function initUI({ onThemeChange, onMotionChange } = {}) {
     window.addEventListener('scroll', onScroll, { passive: true });
   }
 
+  /* ------------------------------ open inside ------------------------------ */
+  /* Jumps to the exploded view for the machine you are looking at. */
+  document.addEventListener('click', (event) => {
+    const button = event.target.closest?.('[data-open-inside]');
+    if (!button) return;
+    const sheet = button.closest('.sheet');
+    const target = sheet?.querySelector('[data-internals]');
+    if (!target) return;
+    target.setAttribute('tabindex', '-1');
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    target.focus({ preventScroll: true });
+  });
+
   /* ------------------------------- tab scrollspy --------------------------- */
   const tabLinks = Array.from(document.querySelectorAll('.tabs a'));
   const sections = tabLinks

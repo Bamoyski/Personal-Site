@@ -4,7 +4,7 @@
  * rotated, and how far it has come apart.
  */
 
-import { machines, fleet, topology, portLayout } from './machines.js?v=20261113';
+import { machines, fleet, topology, portLayout } from './machines.js?v=20261113b';
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -180,7 +180,10 @@ function sheetMarkup(machine) {
             <span class="vp-tag vp-tag--tl">VIEW · ${machine.index}</span>
             <span class="vp-tag vp-tag--tr">${machine.code}</span>
             <span class="vp-tag vp-tag--bl">${machine.imageCredit}</span>
-            <span class="vp-tag vp-tag--br">SCROLL TO ROTATE</span>
+            <button class="vp-open" type="button" data-open-inside>
+              Inside
+              <i data-lucide="arrow-down-right" aria-hidden="true"></i>
+            </button>
             <span class="vp-axis vp-axis--h" aria-hidden="true"></span>
           </div>
 

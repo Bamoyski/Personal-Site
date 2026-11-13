@@ -18,8 +18,8 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 
-import { bakeEnvironment } from './studio.js?v=20261113';
-import { buildChassis } from './chassis.js?v=20261113';
+import { bakeEnvironment } from './studio.js?v=20261113b';
+import { buildChassis } from './chassis.js?v=20261113b';
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -98,6 +98,7 @@ const PLATE_HEIGHT = 3.1;
 export function createScene({ canvas, getFrame, onReady } = {}) {
   const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let isSmall = window.matchMedia('(max-width: 820px)').matches;
+  let motion = prefersReduced ? 0 : 1;
 
   let renderer;
   try {
@@ -452,7 +453,8 @@ export function createScene({ canvas, getFrame, onReady } = {}) {
   }
 
   function setMotion(value) {
-    state.motion = value ? 0 : 1;
+    motion = value ? 0 : 1;
+    state.motion = motion;
   }
 
   /* -------------------------------- resize ------------------------------- */
@@ -482,10 +484,11 @@ export function createScene({ canvas, getFrame, onReady } = {}) {
   let elapsed = 0;
   let lastRect = { left: 0, top: 0, width: 10, height: 10 };
 
-  function loop(now) {
-    if (!running) return;
-    const delta = Math.min((now - lastTime) / 1000, 0.05);
-    lastTime = now;
+  /**
+   * One frame of work. The animation loop and the single-frame render both
+   * come through here, so a bug in one is a bug in both.
+   */
+  function updateFrame(delta) {
     elapsed += delta;
 
     const frame = getFrame?.();
@@ -545,7 +548,13 @@ export function createScene({ canvas, getFrame, onReady } = {}) {
     }
 
     if (gradePass) gradePass.uniforms.uTime.value = elapsed;
+  }
 
+  function loop(now) {
+    if (!running) return;
+    const delta = Math.min((now - lastTime) / 1000, 0.05);
+    lastTime = now;
+    updateFrame(delta);
     requestAnimationFrame(loop);
   }
 
@@ -558,51 +567,7 @@ export function createScene({ canvas, getFrame, onReady } = {}) {
 
   /** Draw a single frame immediately, without waiting for the loop. */
   function renderOnce() {
-    const frame = getFrame?.();
-    if (frame) {
-      if (frame.rect) lastRect = frame.rect;
-      target.yaw = frame.yaw;
-      target.pitch = frame.pitch;
-      target.visible = frame.visible;
-      target.explode = frame.explode || 0;
-      if (frame.plate && frame.plate !== currentKey) loadPlate(frame.plate);
-      if (frame.plate && frame.plate !== machinePlate) loadMachine(frame.plate);
-    }
-    state.yaw = target.yaw;
-    state.pitch = target.pitch;
-    state.visible = target.visible;
-    state.explode = target.explode;
-    stage.visible = state.visible;
-    if (state.visible) {
-      const fade = clamp((state.explode - 0.28) / 0.44, 0, 1);
-      const showPhoto = fade < 0.995;
-      const showModel = fade > 0.005;
-      plate.visible = showPhoto;
-      reflection.visible = showPhoto;
-      shadow.visible = showPhoto;
-      plateMaterial.opacity = 1 - fade;
-      reflectionMaterial.opacity = 0.55 * (1 - fade);
-      shadowMaterial.opacity = 0.85 * (1 - fade);
-      if (machine) {
-        machine.root.visible = showModel;
-        machine.setExplode(state.explode);
-        machine.root.rotation.y = state.yaw * 0.35 + 0.42;
-        machine.root.rotation.x = state.pitch * 0.4 + 0.06;
-        machine.root.updateMatrixWorld(true);
-        machineMaterials.forEach((material) => {
-          material.opacity = fade;
-        });
-      }
-      if (fade < 0.5) framePlate(lastRect, window.innerWidth, window.innerHeight);
-      else frameModel(lastRect, window.innerWidth, window.innerHeight);
-    }
-    if (composer) composer.render(0.016);
-    else renderer.render(scene, camera);
-    frameRendered = true;
-    if (!announced && plateReady && frameRendered) {
-      announced = true;
-      onReady?.();
-    }
+    updateFrame(1 / 60);
   }
 
   function stop() {

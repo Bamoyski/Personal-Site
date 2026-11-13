@@ -18,8 +18,8 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 
-import { bakeEnvironment } from './studio.js';
-import { buildChassis } from './chassis.js';
+import { bakeEnvironment } from './studio.js?v=20261113';
+import { buildChassis } from './chassis.js?v=20261113';
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 const lerp = (a, b, t) => a + (b - a) * t;

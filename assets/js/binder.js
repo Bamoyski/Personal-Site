@@ -4,7 +4,7 @@
  * rotated, and how far it has come apart.
  */
 
-import { machines, fleet, topology, portLayout } from './machines.js';
+import { machines, fleet, topology, portLayout } from './machines.js?v=20261113';
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 const lerp = (a, b, t) => a + (b - a) * t;

@@ -7,8 +7,8 @@
  * photograph in the viewport simply stays put and the page still reads.
  */
 
-import { renderBinder, createFrameProvider } from './binder.js';
-import { initUI } from './ui.js';
+import { renderBinder, createFrameProvider } from './binder.js?v=20261113';
+import { initUI } from './ui.js?v=20261113';
 
 renderBinder();
 
@@ -24,7 +24,7 @@ initUI({
 /* The 3D layer is an enhancement. Never let it take the page down with it. */
 async function boot3D() {
   try {
-    const { createScene } = await import('./scene.js');
+    const { createScene } = await import('./scene.js?v=20261113');
     scene = createScene({
       canvas,
       getFrame: () => frames.getFrame(),

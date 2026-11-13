@@ -88,3 +88,10 @@ Then visit <http://localhost:8000>.
 ## Deploy
 
 Pushes to `main` are deployed to <https://benmoyer.org> through Cloudflare.
+
+**Bump the version before you deploy.** Cloudflare Pages caches static assets
+for four hours and ignores `Cache-Control` for them, so the only reliable
+way to invalidate them is to change the URL. The version appears in
+`index.html` (`main.css?v=`, `main.js?v=`) and in the module imports in
+`main.js`, `scene.js` and `binder.js`. Change `20261113` to today's date in
+all of them.

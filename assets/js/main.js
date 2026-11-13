@@ -1,40 +1,60 @@
 /**
- * Entry point. Builds the binder sheets, wires the 3D layer to the document,
- * and hands control of the page to the DOM layer.
+ * Entry point.
  *
- * The page degrades cleanly: without WebGL the product photograph in the
- * viewport is the fallback and the binder still reads as a binder.
+ * The binder content is rendered first and does not depend on three.js. The 3D
+ * layer is imported separately and is allowed to fail: if the CDN is blocked,
+ * the WebGL context is unavailable or the scene cannot start, the product
+ * photograph in the viewport simply stays put and the page still reads.
  */
 
-import { createScene } from './scene.js';
-import { initUI } from './ui.js';
 import { renderBinder, createFrameProvider } from './binder.js';
+import { initUI } from './ui.js';
 
 renderBinder();
 
 const canvas = document.getElementById('scene');
 const frames = createFrameProvider();
-
 let scene = null;
-try {
-  scene = createScene({
-    canvas,
-    getFrame: () => frames.getFrame(),
-  });
-  if (scene) document.documentElement.classList.add('has-webgl');
-} catch (error) {
-  scene = null;
-}
-
-if (!scene) {
-  // the product photograph in the viewport is the fallback
-  canvas?.setAttribute('hidden', '');
-}
 
 initUI({
   onThemeChange: (theme) => scene?.setTheme(theme),
   onMotionChange: (reduced) => scene?.setMotion(reduced),
 });
+
+/* The 3D layer is an enhancement. Never let it take the page down with it. */
+async function boot3D() {
+  try {
+    const { createScene } = await import('./scene.js');
+    scene = createScene({
+      canvas,
+      getFrame: () => frames.getFrame(),
+      // the photograph stays visible until the canvas can actually show
+      // the product, so there is never an empty panel
+      onReady: () => document.documentElement.classList.add('has-webgl'),
+    });
+    if (!scene) return;
+
+    // if the scene cannot put an image on screen, fall back to the
+    // photograph rather than leaving an empty panel
+    const fallBackToPhoto = () => {
+      document.documentElement.classList.remove('has-webgl');
+      if (canvas) canvas.style.display = 'none';
+    };
+    const watchdog = setTimeout(() => {
+      if (!scene.isReady()) fallBackToPhoto();
+    }, 6000);
+    window.addEventListener('load', () => clearTimeout(watchdog));
+
+    // a lost context drops straight back to the photograph
+    canvas.addEventListener('bm:contextlost', fallBackToPhoto);
+  } catch (error) {
+    scene = null;
+    document.documentElement.classList.remove('has-webgl');
+    if (canvas) canvas.style.display = 'none';
+  }
+}
+
+boot3D();
 
 /* re-measure the sheets once fonts have settled */
 if (document.fonts?.ready) {
@@ -43,4 +63,4 @@ if (document.fonts?.ready) {
 window.addEventListener('load', () => frames.refresh());
 
 /* Small developer handle: window.__bm.scene, window.__bm.frames */
-window.__bm = { scene, frames };
+window.__bm = { get scene() { return scene; }, frames };

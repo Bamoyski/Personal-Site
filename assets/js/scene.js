@@ -95,7 +95,7 @@ const MODELS = {
 
 const PLATE_HEIGHT = 3.1;
 
-export function createScene({ canvas, getFrame } = {}) {
+export function createScene({ canvas, getFrame, onReady } = {}) {
   const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let isSmall = window.matchMedia('(max-width: 820px)').matches;
 
@@ -130,7 +130,7 @@ export function createScene({ canvas, getFrame } = {}) {
   // glossy floor that catches the environment
   const floorTexture = makeFloorTexture();
   const floor = new THREE.Mesh(
-    new THREE.PlaneGeometry(26, 26),
+    new THREE.PlaneGeometry(18, 18),
     new THREE.MeshPhysicalMaterial({
       color: 0x07080a,
       roughness: 0.34,
@@ -195,6 +195,19 @@ export function createScene({ canvas, getFrame } = {}) {
   const textures = {};
   let currentKey = null;
   let loading = false;
+  let plateReady = false;
+  let frameRendered = false;
+  let announced = false;
+
+  /** True once the scene can actually put the product on screen. */
+  function isReady() {
+    return plateReady && frameRendered;
+  }
+
+  canvas.addEventListener('webglcontextlost', () => {
+    plateReady = false;
+    canvas.dispatchEvent(new CustomEvent('bm:contextlost'));
+  });
 
   /* --------------------------- exploded chassis -------------------------- */
   let machine = null;
@@ -241,6 +254,7 @@ export function createScene({ canvas, getFrame } = {}) {
         plateMaterial.needsUpdate = true;
         plate.scale.set(PLATE_HEIGHT * aspect, PLATE_HEIGHT, 1);
         plate.position.y = PLATE_HEIGHT / 2;
+        plateReady = true;
 
         loader.load(dir + 'ref-' + file, (ref) => {
           ref.colorSpace = THREE.SRGBColorSpace;
@@ -524,6 +538,11 @@ export function createScene({ canvas, getFrame } = {}) {
 
     if (composer) composer.render(delta);
     else renderer.render(scene, camera);
+    frameRendered = true;
+    if (!announced && plateReady && frameRendered) {
+      announced = true;
+      onReady?.();
+    }
 
     if (gradePass) gradePass.uniforms.uTime.value = elapsed;
 
@@ -579,6 +598,11 @@ export function createScene({ canvas, getFrame } = {}) {
     }
     if (composer) composer.render(0.016);
     else renderer.render(scene, camera);
+    frameRendered = true;
+    if (!announced && plateReady && frameRendered) {
+      announced = true;
+      onReady?.();
+    }
   }
 
   function stop() {
@@ -598,6 +622,7 @@ export function createScene({ canvas, getFrame } = {}) {
     start,
     stop,
     renderOnce,
+    isReady,
     scene,
     camera,
     renderer,
@@ -615,10 +640,11 @@ function makeFloorTexture() {
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = 256;
   const ctx = canvas.getContext('2d');
-  const gradient = ctx.createRadialGradient(128, 128, 6, 128, 128, 124);
+  const gradient = ctx.createRadialGradient(128, 128, 4, 128, 128, 122);
   gradient.addColorStop(0, '#ffffff');
-  gradient.addColorStop(0.22, '#6e6e6e');
-  gradient.addColorStop(0.55, '#1c1c1c');
+  gradient.addColorStop(0.2, '#3c3c3c');
+  gradient.addColorStop(0.42, '#0d0d0d');
+  gradient.addColorStop(0.72, '#000000');
   gradient.addColorStop(1, '#000000');
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, 256, 256);
